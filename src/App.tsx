@@ -5,8 +5,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { Loader2, Sparkles, Image as ImageIcon, Download, Share2, Check, Palette, Sun, Music, Video, AlertCircle, Key, Home, Users, Eye, FileText, Mic, Languages, Send, Copy, Volume2, Menu } from 'lucide-react';
+import { 
+  Loader2, Sparkles, Image as ImageIcon, Download, Share2, Check, Palette, Sun, Music, Video, 
+  AlertCircle, Key, Home, Users, Eye, FileText, Mic, Languages, Send, Copy, Volume2, Menu, 
+  Search, BookOpen, Calculator, Binary, Zap, Share, ArrowLeft, GraduationCap, School, Library, 
+  Atom, Globe, FlaskConical, Microscope, Dna, Sigma, SquareFunction, PenTool, BookOpenCheck, 
+  ScrollText, Trophy 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
 
 declare global {
   interface Window {
@@ -193,6 +200,20 @@ const FILTERS = [
 // Reference image provided in the prompt
 const REFERENCE_IMAGE_URL = "https://storage.googleapis.com/applet-assets/orange-suit-ref.jpg"; // Placeholder, I will use the actual base64 if needed, but for now I'll assume I can fetch it or it's provided. Actually, I should probably allow the user to upload or just use the one provided in the prompt context.
 
+const BackButton = ({ onClick }: { onClick: () => void }) => (
+  <motion.button
+    initial={{ opacity: 0, x: -10 }}
+    animate={{ opacity: 1, x: 0 }}
+    onClick={onClick}
+    className="mb-8 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
+  >
+    <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-white/10 transition-all">
+      <ArrowLeft size={20} />
+    </div>
+    <span className="font-bold uppercase tracking-widest text-xs">Back</span>
+  </motion.button>
+);
+
 export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -201,38 +222,39 @@ export default function App() {
   const [base64Image, setBase64Image] = useState<string | null>(null);
   const [base64Image2, setBase64Image2] = useState<string | null>(null);
   const [isCopying, setIsCopying] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "3:4" | "4:3">("1:1");
+  
+  // Load preferences from localStorage
+  const savedAspectRatio = typeof window !== 'undefined' ? localStorage.getItem('mi_studio_aspect_ratio') : null;
+  const savedLighting = typeof window !== 'undefined' ? localStorage.getItem('mi_studio_lighting') : null;
+  const savedStyleId = typeof window !== 'undefined' ? localStorage.getItem('mi_studio_style_id') : null;
+
+  const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16" | "3:4" | "4:3">((savedAspectRatio as any) || "1:1");
   const [selectedFilter, setSelectedFilter] = useState(FILTERS[0]);
-  const [lighting, setLighting] = useState<keyof typeof LIGHTING_DESCRIPTIONS>("dramatic");
-  const [selectedStyle, setSelectedStyle] = useState(STYLES[0]);
+  const [lighting, setLighting] = useState<keyof typeof LIGHTING_DESCRIPTIONS>((savedLighting as any) || "dramatic");
+  const [selectedStyle, setSelectedStyle] = useState(() => {
+    if (savedStyleId) {
+      return STYLES.find(s => s.id === savedStyleId) || STYLES[0];
+    }
+    return STYLES[0];
+  });
   const [isStyleSelectorOpen, setIsStyleSelectorOpen] = useState(false);
+
+  // Persist preferences
+  useEffect(() => {
+    localStorage.setItem('mi_studio_aspect_ratio', aspectRatio);
+  }, [aspectRatio]);
+
+  useEffect(() => {
+    localStorage.setItem('mi_studio_lighting', lighting);
+  }, [lighting]);
+
+  useEffect(() => {
+    localStorage.setItem('mi_studio_style_id', selectedStyle.id);
+  }, [selectedStyle]);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;
     const handleScroll = () => {
-      const sections = ['home', 'image-stylizer', 'video-generator', 'music-creator', 'ai-vision', 'ai-scriptwriter', 'ai-voiceover', 'ai-translator', 'about-us'];
-      const scrollPosition = window.scrollY + 100;
-
-      for (const section of sections) {
-        const element = document.getElementById(section);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            let sectionName: any = 'home';
-            if (section === 'home') sectionName = 'home';
-            else if (section === 'about-us') sectionName = 'about';
-            else if (section === 'ai-vision') sectionName = 'vision';
-            else if (section === 'ai-scriptwriter') sectionName = 'script';
-            else if (section === 'ai-voiceover') sectionName = 'voice';
-            else if (section === 'ai-translator') sectionName = 'translate';
-            else sectionName = section.split('-')[0];
-            
-            setActiveSection(sectionName);
-            break;
-          }
-        }
-      }
-
       // Hide/Show toolbar logic
       if (window.scrollY > lastScrollY && window.scrollY > 100) {
         setIsToolbarVisible(false);
@@ -398,7 +420,27 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-  const [activeSection, setActiveSection] = useState<'home' | 'image' | 'video' | 'music' | 'about' | 'vision' | 'script' | 'voice' | 'translate'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'image' | 'video' | 'music' | 'about' | 'vision' | 'script' | 'voice' | 'translate' | 'research' | 'book' | 'calc' | 'math' | 'manifest' | 'edu'>('home');
+  
+  // Pakistan Education States
+  const [eduStep, setEduStep] = useState<'boards' | 'classes' | 'subjects' | 'content'>('boards');
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [eduContent, setEduContent] = useState<string | null>(null);
+  const [isEduLoading, setIsEduLoading] = useState(false);
+  const [eduTheme, setEduTheme] = useState<'dark' | 'sepia' | 'light'>('dark');
+  const [eduFontSize, setEduFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('lg');
+
+  useEffect(() => {
+    if (activeSection === 'edu') {
+      setEduStep('boards');
+      setSelectedBoard(null);
+      setSelectedClass(null);
+      setSelectedSubject(null);
+      setEduContent(null);
+    }
+  }, [activeSection]);
   const [musicPrompt, setMusicPrompt] = useState('');
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
   const [generatedMusicInfo, setGeneratedMusicInfo] = useState<null | { title: string, description: string, lyrics: string }>(null);
@@ -423,6 +465,40 @@ export default function App() {
   const [targetLang, setTargetLang] = useState('Spanish');
   const [translatedResult, setTranslatedResult] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
+
+  // AI Research State
+  const [researchQuery, setResearchQuery] = useState('');
+  const [researchResult, setResearchResult] = useState('');
+  const [isResearching, setIsResearching] = useState(false);
+
+  // AI Book Reading State
+  const [bookTitle, setBookTitle] = useState('');
+  const [bookAnalysis, setBookAnalysis] = useState('');
+  const [isReadingBook, setIsReadingBook] = useState(false);
+
+  // World Calculators State
+  const [calcInput, setCalcInput] = useState('');
+  const [calcResult, setCalcResult] = useState('');
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // AI Mathematics Helper State
+  const [mathProblem, setMathProblem] = useState('');
+  const [mathSolution, setMathSolution] = useState('');
+  const [isSolvingMath, setIsSolvingMath] = useState(false);
+
+  // PWA Installation State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  // AI Manifestation State
+  const [manifestationTopic, setManifestationTopic] = useState('');
+  const [manifestationAffirmation, setManifestationAffirmation] = useState('');
+  const [isManifesting, setIsManifesting] = useState(false);
+
+  // Education AI Chat State
+  const [eduChatQuery, setEduChatQuery] = useState('');
+  const [eduChatHistory, setEduChatHistory] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+  const [isEduChatLoading, setIsEduChatLoading] = useState(false);
 
   const [videoPrompt, setVideoPrompt] = useState('');
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
@@ -671,6 +747,331 @@ export default function App() {
     }
   };
 
+  const handleResearch = async () => {
+    if (!researchQuery) return;
+    setIsResearching(true);
+    setResearchResult('');
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: researchQuery,
+        config: { tools: [{ googleSearch: {} }] },
+      });
+      setResearchResult(response.text || 'No research results found.');
+    } catch (err) {
+      console.error('Research error:', err);
+      setResearchResult('Error performing research. Please try again.');
+    } finally {
+      setIsResearching(false);
+    }
+  };
+
+  const handleReadBook = async () => {
+    if (!bookTitle) return;
+    setIsReadingBook(true);
+    setBookAnalysis('');
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Provide a detailed summary, key themes, and critical analysis of the book: "${bookTitle}".`,
+      });
+      setBookAnalysis(response.text || 'Could not analyze book.');
+    } catch (err) {
+      console.error('Book reading error:', err);
+      setBookAnalysis('Error analyzing book. Please try again.');
+    } finally {
+      setIsReadingBook(false);
+    }
+  };
+
+  const handleCalculate = async () => {
+    if (!calcInput) return;
+    setIsCalculating(true);
+    setCalcResult('');
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Perform the following calculation or conversion and explain the steps: "${calcInput}".`,
+      });
+      setCalcResult(response.text || 'Could not perform calculation.');
+    } catch (err) {
+      console.error('Calculator error:', err);
+      setCalcResult('Error performing calculation. Please try again.');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handleEduBack = () => {
+    if (eduStep === 'content') setEduStep('subjects');
+    else if (eduStep === 'subjects') setEduStep('classes');
+    else if (eduStep === 'classes') setEduStep('boards');
+    else setActiveSection('home');
+  };
+
+  const handleImageBack = () => {
+    if (generatedImage) setGeneratedImage(null);
+    else setActiveSection('home');
+  };
+
+  const handleVideoBack = () => {
+    if (videoUrl) setVideoUrl(null);
+    else setActiveSection('home');
+  };
+
+  const handleMusicBack = () => {
+    if (generatedMusicInfo) setGeneratedMusicInfo(null);
+    else setActiveSection('home');
+  };
+
+  const handleVisionBack = () => {
+    if (visionImage) {
+      setVisionImage(null);
+      setVisionAnalysis('');
+    } else setActiveSection('home');
+  };
+
+  const handleScriptBack = () => {
+    if (generatedScript) setGeneratedScript('');
+    else setActiveSection('home');
+  };
+
+  const handleVoiceBack = () => {
+    if (voiceAudioUrl) setVoiceAudioUrl(null);
+    else setActiveSection('home');
+  };
+
+  const handleTranslateBack = () => {
+    if (translatedResult) setTranslatedResult('');
+    else setActiveSection('home');
+  };
+
+  const handleResearchBack = () => {
+    if (researchResult) setResearchResult('');
+    else setActiveSection('home');
+  };
+
+  const handleBookBack = () => {
+    if (bookAnalysis) setBookAnalysis('');
+    else setActiveSection('home');
+  };
+
+  const handleCalcBack = () => {
+    if (calcResult) setCalcResult('');
+    else setActiveSection('home');
+  };
+
+  const handleMathBack = () => {
+    if (mathSolution) setMathSolution('');
+    else setActiveSection('home');
+  };
+
+  const handleManifestBack = () => {
+    if (manifestationAffirmation) setManifestationAffirmation('');
+    else setActiveSection('home');
+  };
+
+  const handleEduChat = async () => {
+    if (!eduChatQuery || !eduContent) return;
+    const userMsg = eduChatQuery;
+    setEduChatQuery('');
+    setEduChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsEduChatLoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const prompt = `You are an expert academic assistant for Pakistani education. 
+      The student is reading the following content:
+      ---
+      ${eduContent}
+      ---
+      The student asks: "${userMsg}"
+      
+      Provide a clear, helpful, and accurate answer based on the content and your knowledge of the Pakistani syllabus. 
+      Format in Markdown.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      setEduChatHistory(prev => [...prev, { role: 'model', text: response.text }]);
+    } catch (err) {
+      console.error("Failed to fetch edu chat response", err);
+      setEduChatHistory(prev => [...prev, { role: 'model', text: "I'm sorry, I'm having trouble connecting right now. Please try again." }]);
+    } finally {
+      setIsEduChatLoading(false);
+    }
+  };
+
+  const handleFetchEduContent = async (board: string, className: string, subject: string) => {
+    setIsEduLoading(true);
+    setEduContent(null);
+    setEduChatHistory([]); // Reset chat history for new content
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const prompt = `You are an expert academic assistant for Pakistani education. 
+      Provide a detailed solved exercise for the following:
+      Board: ${board}
+      Class: ${className}
+      Subject: ${subject}
+      
+      Include:
+      1. Chapter Name (pick a common one for this subject/class)
+      2. Key Definitions
+      3. Solved Short Questions
+      4. Solved Long Questions
+      5. Important MCQs with answers
+      
+      Format the output in clean Markdown with bold headings and bullet points. 
+      Ensure the content is accurate according to the latest 2026 syllabus.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      setEduContent(response.text);
+    } catch (err) {
+      console.error("Failed to fetch edu content", err);
+      setEduContent("Failed to load content. Please try again.");
+    } finally {
+      setIsEduLoading(false);
+    }
+  };
+
+  const handleFetchSpecialContent = async (type: 'GK' | 'MCQS') => {
+    setIsEduLoading(true);
+    setEduContent(null);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const prompt = type === 'GK' 
+        ? "Provide a comprehensive guide on Pakistan General Knowledge. Include history, geography, important personalities, and current affairs (up to 2026). Format in Markdown."
+        : "Provide 20 high-quality solved Computer Science MCQs with explanations. (Note: In a real app, this would be a full database of 1000, but for this demo, provide 20 representative ones). Format in Markdown.";
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+      setEduContent(response.text);
+    } catch (err) {
+      console.error("Failed to fetch special content", err);
+      setEduContent("Failed to load content. Please try again.");
+    } finally {
+      setIsEduLoading(false);
+    }
+  };
+
+  const EDU_BOARDS = [
+    "Sindh Text Book Board",
+    "Punjab Text Book Board",
+    "Balochistan Text Book Board",
+    "KPK Text Book Board",
+    "Federal Board",
+    "Pakistan General Knowledge",
+    "1000 Computer Solved MCQs"
+  ];
+
+  const EDU_CLASSES = [
+    "KG", "Nursery", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", 
+    "Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "First Year (11)", "Intermediate (12)"
+  ];
+
+  const EDU_SUBJECTS = [
+    "Sindhi", "Urdu", "English", "Physics", "Chemistry", "Mathematics", 
+    "Biology", "Computer Science", "Islamiat", "Pakistan Studies"
+  ];
+
+  const getEduClassIcon = (cls: string) => {
+    if (cls === "KG" || cls === "Nursery") return <School size={24} />;
+    if (cls.includes("Class")) {
+      const num = parseInt(cls.split(" ")[1]);
+      if (num <= 5) return <GraduationCap size={24} />;
+      if (num <= 8) return <Library size={24} />;
+      return <BookOpenCheck size={24} />;
+    }
+    return <Trophy size={24} />;
+  };
+
+  const getEduSubjectIcon = (sub: string) => {
+    switch (sub) {
+      case "Mathematics": return <Sigma size={24} />;
+      case "Physics": return <Atom size={24} />;
+      case "Chemistry": return <FlaskConical size={24} />;
+      case "Biology": return <Microscope size={24} />;
+      case "Computer Science": return <Binary size={24} />;
+      case "English": return <Languages size={24} />;
+      case "Urdu":
+      case "Sindhi": return <ScrollText size={24} />;
+      case "Pakistan Studies":
+      case "Islamiat": return <Globe size={24} />;
+      default: return <FileText size={24} />;
+    }
+  };
+
+  const handleSolveMath = async () => {
+    if (!mathProblem) return;
+    setIsSolvingMath(true);
+    setMathSolution('');
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Solve this mathematics problem step-by-step: "${mathProblem}". Provide clear explanations for each step.`,
+      });
+      setMathSolution(response.text || 'Could not solve math problem.');
+    } catch (err) {
+      console.error('Math error:', err);
+      setMathSolution('Error solving math problem. Please try again.');
+    } finally {
+      setIsSolvingMath(false);
+    }
+  };
+
+  const handleManifest = async () => {
+    if (!manifestationTopic) return;
+    setIsManifesting(true);
+    setManifestationAffirmation('');
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Create a powerful manifestation affirmation and a visualization prompt for the following goal: "${manifestationTopic}". Make it inspiring and positive.`,
+      });
+      setManifestationAffirmation(response.text || 'Could not generate manifestation.');
+    } catch (err) {
+      console.error('Manifestation error:', err);
+      setManifestationAffirmation('Error generating manifestation. Please try again.');
+    } finally {
+      setIsManifesting(false);
+    }
+  };
+
+  const handleShareImage = async () => {
+    const imageData = await getFilteredImageData();
+    if (!imageData) return;
+    
+    if (navigator.share) {
+      try {
+        const blob = await (await fetch(imageData)).blob();
+        const file = new File([blob], 'aura-studio-art.png', { type: 'image/png' });
+        await navigator.share({
+          files: [file],
+          title: 'Mi Studio AI Art',
+          text: 'Check out this amazing AI-generated art from Mi Studio!',
+        });
+      } catch (err) {
+        console.error('Share error:', err);
+        // Fallback to clipboard
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
+  };
+
   const handleDownloadVideo = () => {
     if (!videoUrl) return;
     const link = document.createElement('a');
@@ -728,6 +1129,33 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) {
+      alert("To install Mi Studio on your phone:\n\n1. Open this app in Chrome on Android.\n2. Tap the three dots (⋮) in the top right.\n3. Select 'Install App' or 'Add to Home Screen'.\n\nThis will create an icon on your phone and it will work just like a native app!");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    }
+  };
+
   const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (selectedFilter.filter === 'none') return;
     
@@ -744,7 +1172,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -758,38 +1186,40 @@ export default function App() {
           className="relative z-10 flex flex-col items-center"
         >
           <motion.div 
-            animate={{ 
-              rotate: [0, 10, -10, 0],
-              scale: [1, 1.1, 1]
-            }}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ 
-              duration: 4, 
-              repeat: Infinity,
-              ease: "easeInOut"
+              duration: 1.5, 
+              ease: "easeOut"
             }}
-            className="w-24 h-24 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-[2rem] flex items-center justify-center shadow-[0_0_50px_rgba(234,88,12,0.3)] mb-8"
+            className="w-48 h-48 md:w-64 md:h-64 bg-gradient-to-tr from-orange-600/20 to-orange-400/20 rounded-[3rem] flex items-center justify-center shadow-[0_0_100px_rgba(234,88,12,0.2)] mb-12 overflow-hidden relative border border-white/10"
           >
-            <Sparkles className="w-12 h-12 text-black" />
+            <img 
+              src="https://lh3.googleusercontent.com/d/1YK5GCGHUe6m9XqEBvxki4ck6_1sdsmKD" 
+              className="absolute inset-0 w-full h-full object-cover" 
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           </motion.div>
           <motion.h1
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="text-6xl font-black tracking-tighter text-white mb-2"
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-5xl sm:text-7xl font-black tracking-tighter text-white mb-4"
           >
-            AURA STUDIO
+            MI STUDIO
           </motion.h1>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: "100%" }}
-            transition={{ delay: 1, duration: 1 }}
-            className="h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent w-full mb-4"
+            transition={{ delay: 1.2, duration: 1 }}
+            className="h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent w-full mb-6"
           />
           <motion.p
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            transition={{ delay: 1.2, duration: 0.8 }}
-            className="text-zinc-400 uppercase tracking-[0.4em] text-[10px] font-bold"
+            animate={{ opacity: 0.6 }}
+            transition={{ delay: 1.5, duration: 0.8 }}
+            className="text-zinc-400 uppercase tracking-[0.6em] text-xs font-bold"
           >
             AI Creative Suite
           </motion.p>
@@ -828,62 +1258,6 @@ export default function App() {
       transition={{ duration: 1 }}
       className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-orange-500/30 pb-24 md:pb-0"
     >
-      {/* Mobile Navigation Bar */}
-      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md">
-        <div className="bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-full p-1.5 flex items-center justify-between shadow-2xl">
-          <button
-            onClick={() => {
-              setActiveSection('home');
-              document.getElementById('home')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className={`flex-1 flex flex-col items-center py-2.5 rounded-full transition-all ${activeSection === 'home' ? 'bg-white text-black shadow-lg shadow-white/20' : 'text-zinc-500'}`}
-          >
-            <Home size={18} />
-            <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">Home</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveSection('image');
-              document.getElementById('image-stylizer')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className={`flex-1 flex flex-col items-center py-2.5 rounded-full transition-all ${activeSection === 'image' ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20' : 'text-zinc-500'}`}
-          >
-            <Palette size={18} />
-            <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">Stylizer</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveSection('video');
-              document.getElementById('video-generator')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className={`flex-1 flex flex-col items-center py-2.5 rounded-full transition-all ${activeSection === 'video' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500'}`}
-          >
-            <Video size={18} />
-            <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">Video</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveSection('music');
-              document.getElementById('music-creator')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className={`flex-1 flex flex-col items-center py-2.5 rounded-full transition-all ${activeSection === 'music' ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' : 'text-zinc-500'}`}
-          >
-            <Music size={18} />
-            <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">Music</span>
-          </button>
-          <button
-            onClick={() => {
-              setActiveSection('about');
-              document.getElementById('about-us')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className={`flex-1 flex flex-col items-center py-2.5 rounded-full transition-all ${activeSection === 'about' ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'text-zinc-500'}`}
-          >
-            <Users size={18} />
-            <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">About</span>
-          </button>
-        </div>
-      </div>
-
       {/* Hamburger Menu & Overlay */}
       <div className="fixed top-0 right-0 z-[60]">
         <AnimatePresence>
@@ -905,123 +1279,62 @@ export default function App() {
                 exit={{ opacity: 0, x: 300 }}
                 className="fixed top-0 right-0 h-screen w-80 bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 p-8 shadow-2xl"
               >
-                <h2 className="text-2xl font-bold mb-8 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Aura Studio</h2>
-                <div className="space-y-6">
-                  <a 
-                    href="#image-stylizer" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-orange-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-orange-500/20 rounded-xl text-orange-400">
-                        <Palette size={24} />
+                <h2 className="text-2xl font-bold mb-8 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Mi Studio</h2>
+                <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
+                  {[
+                    { id: 'image', title: 'Image Stylizer', icon: Palette, color: 'orange', desc: 'Transform portraits with AI' },
+                    { id: 'video', title: 'Video Generator', icon: Video, color: 'blue', desc: 'Create videos from text' },
+                    { id: 'music', title: 'Music Creator', icon: Music, color: 'emerald', desc: 'AI musical compositions' },
+                    { id: 'vision', title: 'AI Vision', icon: Eye, color: 'purple', desc: 'Analyze images with AI' },
+                    { id: 'script', title: 'AI Scriptwriter', icon: FileText, color: 'pink', desc: 'Generate cinematic scripts' },
+                    { id: 'voice', title: 'AI Voiceover', icon: Mic, color: 'cyan', desc: 'Text to high-quality speech' },
+                    { id: 'translate', title: 'AI Translator', icon: Languages, color: 'yellow', desc: 'Translate creative content' },
+                    { id: 'research', title: 'AI Research', icon: Search, color: 'indigo', desc: 'Deep research with AI' },
+                    { id: 'book', title: 'AI Book Reading', icon: BookOpen, color: 'rose', desc: 'Analyze and summarize books' },
+                    { id: 'calc', title: 'World Calculators', icon: Calculator, color: 'amber', desc: 'Solve complex calculations' },
+                    { id: 'math', title: 'AI Math Helper', icon: Binary, color: 'teal', desc: 'Step-by-step math solutions' },
+                    { id: 'edu', title: 'Pakistan Education', icon: BookOpen, color: 'emerald', desc: 'Latest syllabus & solved exercises' },
+                    { id: 'manifest', title: 'AI Manifestation', icon: Zap, color: 'violet', desc: 'Personalized affirmations' }
+                  ].map((item) => (
+                    <button 
+                      key={item.id}
+                      onClick={() => {
+                        setActiveSection(item.id as any);
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full block group text-left"
+                    >
+                      <div className={`flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-${item.color}-500/50 hover:bg-white/10 transition-all`}>
+                        <div className={`p-3 bg-${item.color}-500/20 rounded-xl text-${item.color}-400`}>
+                          <item.icon size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-sm text-white group-hover:text-white transition-colors">{item.title}</h3>
+                          <p className="text-[10px] text-zinc-500">{item.desc}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-orange-400 transition-colors">AI Image Stylizer</h3>
-                        <p className="text-xs text-zinc-500">Transform portraits with AI</p>
-                      </div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="#music-creator" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-orange-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-orange-500/20 rounded-xl text-orange-400">
-                        <Music size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-orange-400 transition-colors">AI Music Creator</h3>
-                        <p className="text-xs text-zinc-500">Create music from text help of AI</p>
-                      </div>
-                    </div>
-                  </a>
-                  
-                  <a 
-                    href="#video-generator" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
-                        <Video size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">AI Video Gen</h3>
-                        <p className="text-xs text-zinc-500">Create videos from text prompts</p>
-                      </div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="#ai-vision" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
-                        <Eye size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-purple-400 transition-colors">AI Vision</h3>
-                        <p className="text-xs text-zinc-500">Analyze images with AI</p>
-                      </div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="#ai-scriptwriter" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-pink-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-pink-500/20 rounded-xl text-pink-400">
-                        <FileText size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-pink-400 transition-colors">AI Scriptwriter</h3>
-                        <p className="text-xs text-zinc-500">Generate cinematic scripts</p>
-                      </div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="#ai-voiceover" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-cyan-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-cyan-500/20 rounded-xl text-cyan-400">
-                        <Mic size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-cyan-400 transition-colors">AI Voiceover</h3>
-                        <p className="text-xs text-zinc-500">Text to high-quality speech</p>
-                      </div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="#ai-translator" 
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block group"
-                  >
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-yellow-500/50 hover:bg-white/10 transition-all">
-                      <div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-400">
-                        <Languages size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white group-hover:text-yellow-400 transition-colors">AI Translator</h3>
-                        <p className="text-xs text-zinc-500">Translate creative content</p>
-                      </div>
-                    </div>
-                  </a>
+                    </button>
+                  ))}
                 </div>
                 
-                <div className="absolute bottom-8 left-8 right-8">
-                  <p className="text-xs text-zinc-600 text-center">© 2026 Aura Studio • AI Creative Suite</p>
+                <div className="absolute bottom-8 left-8 right-8 space-y-3">
+                  <button 
+                    onClick={handleInstallApp}
+                    className="w-full py-3 bg-orange-500 text-black rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-600 transition-all active:scale-95"
+                  >
+                    <Download size={18} />
+                    Install App
+                  </button>
+                  <button 
+                    onClick={() => {
+                      window.location.href = '/api/download-app';
+                    }}
+                    className="w-full py-3 bg-white/10 text-white border border-white/10 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/20 transition-all active:scale-95"
+                  >
+                    <FileText size={18} />
+                    Export to ZIP
+                  </button>
+                  <p className="text-xs text-zinc-600 text-center pt-2">© 2026 Mi Studio • AI Creative Suite</p>
                 </div>
               </motion.div>
             </>
@@ -1033,21 +1346,8 @@ export default function App() {
           <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
             <Sparkles className="w-6 h-6 text-black" />
           </div>
-          <span className="text-xl font-black tracking-tighter uppercase hidden sm:block">Aura Studio</span>
+          <span className="text-xl font-black tracking-tighter uppercase hidden sm:block">Mi Studio</span>
         </div>
-
-        {/* Toggle Button - Placed after overlay to stay on top */}
-        <button 
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="fixed top-6 right-6 p-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full hover:bg-white/10 transition-all duration-300 group z-[70]"
-          aria-label={isMenuOpen ? "Close Menu" : "Open Menu"}
-        >
-          <div className="w-6 h-5 flex flex-col justify-between">
-            <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-2' : 'w-6'}`} />
-            <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'w-4'}`} />
-            <span className={`h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-2' : 'w-5'}`} />
-          </div>
-        </button>
       </div>
 
       {/* Sliding Floating Toolbar */}
@@ -1075,50 +1375,51 @@ export default function App() {
             </motion.div>
           </button>
 
-          <a 
-            href="#home"
+          <button 
             onClick={() => { setActiveSection('home'); setIsToolbarVisible(true); }}
             className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'home' ? 'bg-white text-black shadow-lg shadow-white/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
           >
             <Home size={20} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Home</span>
-          </a>
+          </button>
 
-          <a 
-            href="#image-stylizer"
+          <button 
             onClick={() => { setActiveSection('image'); setIsToolbarVisible(true); }}
             className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'image' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
           >
             <Palette size={20} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Stylizer</span>
-          </a>
+          </button>
 
-          <a 
-            href="#video-generator"
+          <button 
             onClick={() => { setActiveSection('video'); setIsToolbarVisible(true); }}
             className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'video' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
           >
             <Video size={20} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Video</span>
-          </a>
+          </button>
 
-          <a 
-            href="#music-creator"
+          <button 
             onClick={() => { setActiveSection('music'); setIsToolbarVisible(true); }}
             className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'music' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
           >
             <Music size={20} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Music</span>
-          </a>
+          </button>
 
-          <a 
-            href="#about-us"
-            onClick={() => { setActiveSection('about'); setIsToolbarVisible(true); }}
-            className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'about' ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+          <button 
+            onClick={() => { 
+              setActiveSection('home'); 
+              setTimeout(() => {
+                document.getElementById('about-us')?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+              setIsToolbarVisible(true); 
+            }}
+            className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition-all ${activeSection === 'about' ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
           >
             <Users size={20} />
             <span className="text-[10px] font-bold uppercase tracking-tighter">About</span>
-          </a>
+          </button>
 
           <button 
             onClick={() => setIsMenuOpen(true)}
@@ -1138,67 +1439,303 @@ export default function App() {
 
       <main className="relative z-10 pt-24 pb-32">
         {/* Home / Hero Section */}
-        <section id="home" className="max-w-6xl mx-auto px-6 mb-32 min-h-[80vh] flex flex-col items-center justify-center text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="mb-12"
-          >
-            <div className="w-24 h-24 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/20 mx-auto mb-8">
-              <Sparkles className="w-12 h-12 text-black" />
-            </div>
-            <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-6 bg-gradient-to-b from-white to-white/30 bg-clip-text text-transparent">
-              AURA STUDIO
-            </h1>
-            <p className="text-zinc-400 text-xl md:text-2xl max-w-2xl mx-auto leading-relaxed font-light mb-10">
-              The ultimate AI creative suite for high-end image stylization, cinematic video generation, and musical compositions.
-            </p>
-            <button
-              onClick={() => document.getElementById('image-stylizer')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-10 py-4 bg-white text-black rounded-full font-bold hover:bg-orange-500 hover:text-white transition-all shadow-xl shadow-white/10 flex items-center gap-2 mx-auto group"
+        {activeSection === 'home' && (
+          <section id="home" className="max-w-7xl mx-auto px-6 mb-32">
+            {/* Hero Header */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-20 pt-12"
             >
-              Get Started
-              <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
-            </button>
-          </motion.div>
+              <div className="w-24 h-24 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/20 mx-auto mb-8 overflow-hidden relative group">
+                <img 
+                  src="https://picsum.photos/seed/mistudio/200/200" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:scale-110 transition-transform duration-700" 
+                  referrerPolicy="no-referrer"
+                />
+                <Zap className="w-12 h-12 text-black relative z-10" />
+              </div>
+              <h1 className="text-6xl sm:text-7xl md:text-9xl font-black tracking-tighter mb-6 bg-gradient-to-b from-white to-white/30 bg-clip-text text-transparent">
+                MI STUDIO
+              </h1>
+              <p className="text-zinc-400 text-lg md:text-2xl max-w-3xl mx-auto leading-relaxed font-light px-4">
+                The ultimate AI creative suite created by Mehar Ali Mehrani. <br className="hidden md:block" />
+                High-end image stylization, cinematic video generation, and musical compositions.
+              </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
-            {[
-              { id: 'image-stylizer', title: 'Image Stylizer', icon: Palette, color: 'orange', desc: 'Transform portraits into art', accent: 'bg-orange-500/20 text-orange-400', border: 'bg-orange-500' },
-              { id: 'video-generator', title: 'Video Generator', icon: Video, color: 'blue', desc: 'Create cinematic scenes', accent: 'bg-blue-500/20 text-blue-400', border: 'bg-blue-500' },
-              { id: 'music-creator', title: 'Music Creator', icon: Music, color: 'emerald', desc: 'Compose unique melodies', accent: 'bg-emerald-500/20 text-emerald-400', border: 'bg-emerald-500' },
-              { id: 'ai-vision', title: 'AI Vision', icon: Eye, color: 'purple', desc: 'Analyze scenes from images', accent: 'bg-purple-500/20 text-purple-400', border: 'bg-purple-500' },
-              { id: 'ai-scriptwriter', title: 'AI Scriptwriter', icon: FileText, color: 'pink', desc: 'Generate cinematic scripts', accent: 'bg-pink-500/20 text-pink-400', border: 'bg-pink-500' },
-              { id: 'ai-voiceover', title: 'AI Voiceover', icon: Mic, color: 'cyan', desc: 'Text to high-quality speech', accent: 'bg-cyan-500/20 text-cyan-400', border: 'bg-cyan-500' },
-              { id: 'ai-translator', title: 'AI Translator', icon: Languages, color: 'yellow', desc: 'Translate creative content', accent: 'bg-yellow-500/20 text-yellow-400', border: 'bg-yellow-500' }
-            ].map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => document.getElementById(tool.id)?.scrollIntoView({ behavior: 'smooth' })}
-                className="group p-8 bg-white/5 border border-white/10 rounded-[2.5rem] hover:bg-white/10 transition-all text-left relative overflow-hidden"
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="mt-10 flex flex-wrap items-center justify-center gap-4"
               >
-                <div className={`w-12 h-12 rounded-2xl ${tool.accent} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                  <tool.icon size={24} />
+                <button 
+                  onClick={() => setIsMenuOpen(true)}
+                  className="px-8 py-3 bg-orange-500 text-black font-bold rounded-xl hover:bg-orange-600 transition-all flex items-center gap-2"
+                >
+                  <Menu size={18} />
+                  Explore Tools
+                </button>
+                <a 
+                  href="/api/download-app" 
+                  download="mi-studio-source.zip"
+                  className="px-8 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+                >
+                  <Download size={18} />
+                  Download App (ZIP)
+                </a>
+              </motion.div>
+            </motion.div>
+
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto mb-16 relative group">
+              <div className="absolute inset-0 bg-orange-500/20 blur-2xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
+              <div className="relative flex items-center bg-zinc-900/50 border border-white/10 rounded-2xl p-2 backdrop-blur-xl focus-within:border-orange-500/50 transition-all">
+                <Search className="w-6 h-6 text-zinc-500 ml-4" />
+                <input 
+                  type="text" 
+                  placeholder="Search for tools (e.g. 'video', 'math', 'education')..." 
+                  className="w-full bg-transparent border-none focus:ring-0 text-white px-4 py-3 text-lg placeholder:text-zinc-600"
+                  onChange={(e) => {
+                    const query = e.target.value.toLowerCase();
+                    const cards = document.querySelectorAll('.tool-card');
+                    const categories = document.querySelectorAll('.category-section');
+                    
+                    let hasVisibleCards = false;
+                    cards.forEach((card: any) => {
+                      const title = card.getAttribute('data-title')?.toLowerCase() || '';
+                      const desc = card.getAttribute('data-desc')?.toLowerCase() || '';
+                      if (title.includes(query) || desc.includes(query)) {
+                        card.style.display = 'flex';
+                        hasVisibleCards = true;
+                      } else {
+                        card.style.display = 'none';
+                      }
+                    });
+
+                    categories.forEach((cat: any) => {
+                      const visibleCards = cat.querySelectorAll('.tool-card[style="display: flex;"]');
+                      cat.style.display = visibleCards.length > 0 || query === '' ? 'block' : 'none';
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Bento Grid Categories */}
+            <div className="space-y-24">
+              {[
+                {
+                  title: 'Creative Studio',
+                  icon: Sparkles,
+                  color: 'text-orange-500',
+                  tools: [
+                    { id: 'image', title: 'Image Stylizer', icon: Palette, color: 'orange', desc: 'Transform portraits into cinematic masterpieces.', size: 'large', accent: 'bg-orange-500/20 text-orange-400', border: 'bg-orange-500' },
+                    { id: 'video', title: 'Video Generator', icon: Video, color: 'blue', desc: 'Cinematic scenes from text prompts.', size: 'medium', accent: 'bg-blue-500/20 text-blue-400', border: 'bg-blue-500' },
+                    { id: 'music', title: 'Music Creator', icon: Music, color: 'emerald', desc: 'Compose unique melodies and scores.', size: 'small', accent: 'bg-emerald-500/20 text-emerald-400', border: 'bg-emerald-500' },
+                    { id: 'vision', title: 'AI Vision', icon: Eye, color: 'purple', desc: 'Analyze and understand scenes.', size: 'small', accent: 'bg-purple-500/20 text-purple-400', border: 'bg-purple-500' },
+                  ]
+                },
+                {
+                  title: 'Writing & Language',
+                  icon: FileText,
+                  color: 'text-pink-500',
+                  tools: [
+                    { id: 'script', title: 'AI Scriptwriter', icon: FileText, color: 'pink', desc: 'Professional cinematic scripts.', size: 'medium', accent: 'bg-pink-500/20 text-pink-400', border: 'bg-pink-500' },
+                    { id: 'voice', title: 'AI Voiceover', icon: Mic, color: 'cyan', desc: 'Natural-sounding speech synthesis.', size: 'small', accent: 'bg-cyan-500/20 text-cyan-400', border: 'bg-cyan-500' },
+                    { id: 'translate', title: 'AI Translator', icon: Languages, color: 'yellow', desc: 'Break global language barriers.', size: 'small', accent: 'bg-yellow-500/20 text-yellow-400', border: 'bg-yellow-500' },
+                  ]
+                },
+                {
+                  title: 'Education & Research',
+                  icon: GraduationCap,
+                  color: 'text-emerald-500',
+                  tools: [
+                    { id: 'edu', title: 'Pakistan Education', icon: BookOpen, color: 'emerald', desc: 'Latest academic syllabus and solved exercises.', size: 'large', accent: 'bg-emerald-500/20 text-emerald-400', border: 'bg-emerald-500' },
+                    { id: 'math', title: 'AI Math Helper', icon: Binary, color: 'teal', desc: 'Step-by-step math solutions.', size: 'medium', accent: 'bg-teal-500/20 text-teal-400', border: 'bg-teal-500' },
+                    { id: 'research', title: 'AI Research', icon: Search, color: 'indigo', desc: 'Deep research on any topic.', size: 'small', accent: 'bg-indigo-500/20 text-indigo-400', border: 'bg-indigo-500' },
+                    { id: 'book', title: 'AI Book Reading', icon: BookOpen, color: 'rose', desc: 'Summarize and analyze books.', size: 'small', accent: 'bg-rose-500/20 text-rose-400', border: 'bg-rose-500' },
+                    { id: 'calc', title: 'World Calculators', icon: Calculator, color: 'amber', desc: 'Complex unit and currency solver.', size: 'small', accent: 'bg-amber-500/20 text-amber-400', border: 'bg-amber-500' },
+                  ]
+                },
+                {
+                  title: 'Personal Growth',
+                  icon: Zap,
+                  color: 'text-violet-500',
+                  tools: [
+                    { id: 'manifest', title: 'AI Manifestation', icon: Zap, color: 'violet', desc: 'Personalized affirmations and visualization.', size: 'medium', accent: 'bg-violet-500/20 text-violet-400', border: 'bg-violet-500' }
+                  ]
+                }
+              ].map((category, catIdx) => (
+                <div key={catIdx} className="category-section space-y-8">
+                  <div className="flex items-center gap-4 px-2">
+                    <div className={`p-2 rounded-lg bg-white/5 ${category.color}`}>
+                      <category.icon size={20} />
+                    </div>
+                    <h2 className="text-2xl font-black uppercase tracking-widest text-zinc-500">{category.title}</h2>
+                    <div className="flex-1 h-px bg-white/5" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {category.tools.map((tool) => (
+                      <motion.button
+                        key={tool.id}
+                        data-title={tool.title}
+                        data-desc={tool.desc}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        onClick={() => {
+                          setActiveSection(tool.id as any);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className={`tool-card group p-8 bg-zinc-900/50 border border-white/10 rounded-[2.5rem] hover:bg-white/5 transition-all text-left relative overflow-hidden flex flex-col gap-6 ${
+                          tool.size === 'large' ? 'md:col-span-2' : ''
+                        }`}
+                      >
+                        <div className={`w-14 h-14 shrink-0 rounded-2xl ${tool.accent} flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
+                          <tool.icon size={28} />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-black mb-2 uppercase tracking-tight group-hover:text-white transition-colors">{tool.title}</h3>
+                          <p className="text-zinc-500 leading-relaxed text-sm group-hover:text-zinc-400 transition-colors">{tool.desc}</p>
+                        </div>
+                        
+                        {/* Interactive Arrow */}
+                        <div className="mt-auto flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-600 group-hover:text-white transition-colors">
+                          <span>Open Tool</span>
+                          <ArrowLeft className="rotate-180 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
+
+                        {/* Decorative Background Glow */}
+                        <div className={`absolute -right-12 -bottom-12 w-32 h-32 blur-3xl rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${tool.border}`} />
+                        
+                        {/* Hover Border Accent */}
+                        <div className={`absolute bottom-0 left-0 w-full h-1 ${tool.border} scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500`} />
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold mb-2">{tool.title}</h3>
-                <p className="text-sm text-zinc-500">{tool.desc}</p>
-                <div className={`absolute bottom-0 left-0 w-full h-1 ${tool.border} scale-x-0 group-hover:scale-x-100 transition-transform origin-left`} />
-              </button>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+
+            {/* About Section - Portfolio */}
+            <section id="about-us" className="mt-32 pt-32 border-t border-white/5">
+              <header className="text-center mb-20">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-medium mb-6"
+                >
+                  <Users size={14} />
+                  <span>THE VISIONARY CREATOR</span>
+                </motion.div>
+                <motion.h2 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 }}
+                  className="text-5xl md:text-7xl font-black tracking-tighter mb-6"
+                >
+                  MEHAR ALI MEHRANI
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2 }}
+                  className="text-zinc-400 text-lg max-w-2xl mx-auto font-light"
+                >
+                  Hailing from the historic land of <span className="text-white font-medium">Sindh, Pakistan</span>, specifically from the beautiful village of <span className="text-white font-medium">Ahmed Abad in Khairpur Mir's</span>.
+                </motion.p>
+              </header>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="relative group"
+                >
+                  <div className="aspect-[4/5] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative">
+                    <img 
+                      src="https://lh3.googleusercontent.com/d/1zEgcmw21YxauHfmRH2AMsqr1B8BXY5JO" 
+                      alt="Mehar Ali Mehrani" 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-6 left-6 md:bottom-8 md:left-8">
+                      <p className="text-white font-bold text-2xl md:text-3xl tracking-tight">Mehar Ali Mehrani</p>
+                      <p className="text-orange-400 text-xs md:text-sm font-medium uppercase tracking-widest">Founder and Visionary</p>
+                    </div>
+                  </div>
+                  {/* Decorative Glow */}
+                  <div className="absolute -inset-4 bg-orange-500/10 blur-3xl -z-10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="space-y-10 text-left"
+                >
+                  <div className="space-y-6">
+                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight">Why I Created Mi Studio</h3>
+                    <div className="space-y-4 text-zinc-400 leading-relaxed text-base md:text-lg">
+                      <p>
+                        My purpose in creating Mi Studio was to bridge the gap between advanced technology and the dreams of every student and creator in Pakistan and beyond. I believe that education and creativity should not be limited by resources.
+                      </p>
+                      <p>
+                        I wanted to build a platform where a student from a small village like <span className="text-white">Ahmed Abad</span> can access the same high-quality AI tools and educational support as someone in a major global city. This app is my contribution to empowering the next generation of thinkers, artists, and leaders.
+                      </p>
+                      <p className="text-white font-medium italic">
+                        "My vision is to see every student feel easy and confident in their educational journey, supported by the best that modern AI has to offer."
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-8 border-t border-white/5">
+                    <div className="p-6 md:p-8 rounded-3xl bg-orange-500/5 border border-orange-500/10 backdrop-blur-xl">
+                      <p className="text-zinc-300 text-base md:text-lg italic leading-relaxed">
+                        "I sincerely hope that this app will be a useful companion for all users and students. May it light the path to your success. I only ask for your prayers for my goodness and well-being as I continue to serve our community through technology."
+                      </p>
+                      <p className="mt-4 text-orange-400 font-bold">— Mehar Ali Mehrani</p>
+                    </div>
+
+                    <div className="pt-6">
+                      <a 
+                        href="/api/download-app" 
+                        download="mi-studio-source.zip"
+                        className="inline-flex items-center gap-3 px-8 py-4 bg-white text-black rounded-2xl font-bold hover:bg-orange-500 hover:text-white transition-all group"
+                      >
+                        <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <span>Download Source Code (ZIP)</span>
+                      </a>
+                      <p className="mt-3 text-zinc-500 text-xs">
+                        Get the full source code of Mi Studio to run locally or publish yourself.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </section>
+          </section>
+        )}
 
         {/* Image Stylizer Section */}
-        <section id="image-stylizer" className="max-w-6xl mx-auto px-6 mb-32">
-          <header className="mb-16 text-center lg:text-left">
+        {activeSection === 'image' && (
+          <section id="image-stylizer" className="max-w-6xl mx-auto px-6 mb-32">
+            <BackButton onClick={handleImageBack} />
+            <header className="mb-16 text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-5xl lg:text-7xl font-black tracking-tighter mb-4 bg-gradient-to-r from-white via-white to-orange-500 bg-clip-text text-transparent uppercase">
-              AURA <br /> STUDIO
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter mb-4 bg-gradient-to-r from-white via-white to-orange-500 bg-clip-text text-transparent uppercase">
+              MI <br className="hidden sm:block" /> STUDIO
             </h1>
             <p className="text-zinc-400 text-lg max-w-xl mx-auto lg:mx-0">
               Transform your portrait into a cinematic masterpiece. Stand out from the crowd with dramatic lighting and bold artistic styles.
@@ -1209,7 +1746,7 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           {/* Left Column: Input */}
           <div className="space-y-8">
-              <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-xl">
                 <button 
                   onClick={() => setIsStyleSelectorOpen(!isStyleSelectorOpen)}
                   className="w-full flex items-center justify-between group"
@@ -1270,7 +1807,7 @@ export default function App() {
                 </AnimatePresence>
               </div>
 
-              <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-xl">
                 <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                   <ImageIcon className="w-5 h-5 text-orange-500" />
                   Reference Images
@@ -1444,7 +1981,7 @@ export default function App() {
                       style={{ filter: selectedFilter.filter }}
                     />
                     {/* Hover overlay for quick download */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8 gap-4">
                       <a 
                         href={generatedImage} 
                         download="orange-suit-stylized.png"
@@ -1454,6 +1991,13 @@ export default function App() {
                         <Download className="w-5 h-5" />
                         Download
                       </a>
+                      <button 
+                        onClick={handleShareImage}
+                        className="bg-white/10 backdrop-blur-md text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-white/20 transition-colors border border-white/20"
+                      >
+                        <Share2 className="w-5 h-5" />
+                        Share
+                      </button>
                     </div>
                   </motion.div>
                 ) : (
@@ -1579,10 +2123,13 @@ export default function App() {
           </div>
         </div>
       </section>
+    )}
 
       {/* Video Generator Section */}
-      <section id="video-generator" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      {activeSection === 'video' && (
+        <section id="video-generator" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
+          <BackButton onClick={handleVideoBack} />
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -1592,8 +2139,8 @@ export default function App() {
               <Video size={14} />
               <span>VEO 3.1 FAST</span>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-bold tracking-tighter mb-6">
-              AI VIDEO <br /> GENERATION
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tighter mb-6">
+              AI VIDEO <br className="hidden sm:block" /> GENERATION
             </h2>
             <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
               Transform your ideas into high-quality videos. Describe the scene you want to see, and our AI will bring it to life.
@@ -1929,10 +2476,13 @@ export default function App() {
           </div>
         </div>
       </section>
+    )}
 
       {/* Music Creator Section */}
-      <section id="music-creator" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      {activeSection === 'music' && (
+        <section id="music-creator" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+          <BackButton onClick={handleMusicBack} />
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -1942,8 +2492,8 @@ export default function App() {
               <Music size={14} />
               <span>NEW FEATURE</span>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-bold tracking-tighter mb-6">
-              AI MUSIC <br /> CREATION
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tighter mb-6">
+              AI MUSIC <br className="hidden sm:block" /> CREATION
             </h2>
             <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
               Describe the mood, genre, and style of the music you want to create. Our AI will generate a composition description and lyrics for you.
@@ -2068,10 +2618,13 @@ export default function App() {
           </motion.div>
         </div>
       </section>
+    )}
 
         {/* AI Vision Section */}
-        <section id="ai-vision" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        {activeSection === 'vision' && (
+          <section id="ai-vision" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleVisionBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -2081,7 +2634,7 @@ export default function App() {
                 <Eye size={14} />
                 <span>AI VISION</span>
               </div>
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6">SCENE ANALYZER</h2>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">SCENE ANALYZER</h2>
               <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
                 Upload any image to get a deep, creative analysis. Our AI identifies lighting, mood, and composition to help you generate better prompts.
               </p>
@@ -2141,17 +2694,20 @@ export default function App() {
             </motion.div>
           </div>
         </section>
+      )}
 
         {/* AI Scriptwriter Section */}
-        <section id="ai-scriptwriter" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        {activeSection === 'script' && (
+          <section id="ai-scriptwriter" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleScriptBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               className="order-2 lg:order-1"
             >
-              <div className="aspect-[3/4] rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
+              <div className="aspect-[3/4] rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
                 {generatedScript ? (
                   <div className="h-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -2218,10 +2774,13 @@ export default function App() {
             </motion.div>
           </div>
         </section>
+      )}
 
         {/* AI Voiceover Section */}
-        <section id="ai-voiceover" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        {activeSection === 'voice' && (
+          <section id="ai-voiceover" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleVoiceBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -2231,7 +2790,7 @@ export default function App() {
                 <Mic size={14} />
                 <span>AI VOICEOVER</span>
               </div>
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6">TEXT TO SPEECH</h2>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">TEXT TO SPEECH</h2>
               <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
                 Bring your scripts to life with high-quality AI voices. Perfect for narration, character dialogue, or creative audio projects.
               </p>
@@ -2294,17 +2853,20 @@ export default function App() {
             </motion.div>
           </div>
         </section>
+      )}
 
         {/* AI Translator Section */}
-        <section id="ai-translator" className="max-w-6xl mx-auto px-6 py-20 border-t border-white/5">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        {activeSection === 'translate' && (
+          <section id="ai-translator" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleTranslateBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               className="order-2 lg:order-1"
             >
-              <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
+              <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
                 {translatedResult ? (
                   <div className="h-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
@@ -2347,7 +2909,7 @@ export default function App() {
                 <Languages size={14} />
                 <span>AI TRANSLATOR</span>
               </div>
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6">GLOBAL POLYGLOT</h2>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">GLOBAL POLYGLOT</h2>
               <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
                 Break language barriers. Translate your scripts, lyrics, or creative ideas into any language while maintaining artistic tone.
               </p>
@@ -2385,108 +2947,722 @@ export default function App() {
             </motion.div>
           </div>
         </section>
+      )}
 
-        {/* About Section */}
-        <section id="about-us" className="max-w-6xl mx-auto px-6 py-32 border-t border-white/5">
-          <header className="text-center mb-20">
+        {/* AI Research Section */}
+        {activeSection === 'research' && (
+          <section id="ai-research" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleResearchBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-medium mb-6"
-            >
-              <Users size={14} />
-              <span>THE CREATORS</span>
-            </motion.div>
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-5xl md:text-7xl font-black tracking-tighter mb-6"
-            >
-              M.A BROTHERS
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="text-zinc-400 text-lg max-w-2xl mx-auto font-light"
-            >
-              Aura Studio is the brainchild of M.A Brothers, a duo of visionary creators from Pakistan dedicated to merging technology with artistic expression.
-            </motion.p>
-          </header>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="relative group"
             >
-              <div className="aspect-[16/9] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative">
-                <img 
-                  src="https://picsum.photos/seed/mabrothers/1200/600" 
-                  alt="M.A Brothers" 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  referrerPolicy="no-referrer"
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium mb-6">
+                <Search size={14} />
+                <span>AI RESEARCH</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">DEEP ANALYZER</h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                Harness the power of Google Search and AI to conduct deep research on any topic. Get summaries, key facts, and verified sources in seconds.
+              </p>
+              
+              <div className="space-y-4">
+                <textarea
+                  value={researchQuery}
+                  onChange={(e) => setResearchQuery(e.target.value)}
+                  placeholder="What would you like to research today?"
+                  className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-8 left-8">
-                  <p className="text-white font-bold text-2xl tracking-tight">M.A Brothers</p>
-                  <p className="text-white/60 text-sm">Founders of Aura Studio</p>
-                </div>
+                <button
+                  onClick={handleResearch}
+                  disabled={isResearching || !researchQuery}
+                  className="w-full py-4 bg-indigo-500 hover:bg-indigo-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Search size={18} />
+                  {isResearching ? 'Researching...' : 'Start Research'}
+                </button>
               </div>
-              {/* Decorative Glow */}
-              <div className="absolute -inset-4 bg-purple-500/10 blur-3xl -z-10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="space-y-10"
+              className="relative"
             >
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400">
-                    <Check size={16} />
+              <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
+                {researchResult ? (
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Research Findings</h4>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(researchResult);
+                          alert('Research copied to clipboard!');
+                        }}
+                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                        {researchResult}
+                      </div>
+                    </div>
                   </div>
-                  Mr. Mehar Ali
-                </h3>
-                <p className="text-zinc-400 leading-relaxed">
-                  Hailing from <span className="text-white font-medium">Khairpur, Sindh, Pakistan</span>, Mr. Mehar Ali is a distinguished academic with a B.Sc from the University of Khairpur and a Master's from the University of Karachi. He currently serves with honor in the <span className="text-orange-400 font-medium">Special Security Unit of the Sindh Police</span>, bringing discipline and strategic vision to Aura Studio.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                    <Check size={16} />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Search size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">No Research Data</h3>
+                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a query to begin your deep dive</p>
+                    </div>
                   </div>
-                  Mr. Adalat Ali <span className="text-xs font-normal text-zinc-500 ml-2 uppercase tracking-widest">Second CEO</span>
-                </h3>
-                <p className="text-zinc-400 leading-relaxed">
-                  Mr. Adalat Ali holds an M.Phil from the <span className="text-white font-medium">University of Karachi</span>. As a leading researcher currently based in <span className="text-white font-medium">China</span> at a private firm, he drives the technological innovation and research that powers our AI creative suite.
-                </p>
-              </div>
-
-              <div className="pt-6">
-                <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                  <p className="text-zinc-500 text-sm italic">
-                    "Our mission is to democratize high-end creativity through the power of artificial intelligence, making cinematic art accessible to everyone."
-                  </p>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>
         </section>
+      )}
+
+        {/* AI Book Reading Section */}
+        {activeSection === 'book' && (
+          <section id="ai-book" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleBookBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="order-2 lg:order-1"
+            >
+              <div className="aspect-[3/4] rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
+                {bookAnalysis ? (
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Book Analysis</h4>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(bookAnalysis);
+                          alert('Analysis copied to clipboard!');
+                        }}
+                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap italic">
+                        {bookAnalysis}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <BookOpen size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">No Book Analyzed</h3>
+                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a book title to get insights</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="order-1 lg:order-2"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium mb-6">
+                <BookOpen size={14} />
+                <span>AI BOOK READING</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">LITERARY COMPANION</h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                Get instant summaries, character analysis, and thematic deep-dives for any book. Perfect for students, researchers, and avid readers.
+              </p>
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={bookTitle}
+                  onChange={(e) => setBookTitle(e.target.value)}
+                  placeholder="Enter book title and author..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-rose-500 transition-colors"
+                />
+                <button
+                  onClick={handleReadBook}
+                  disabled={isReadingBook || !bookTitle}
+                  className="w-full py-4 bg-rose-500 hover:bg-rose-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <BookOpen size={18} />
+                  {isReadingBook ? 'Analyzing Book...' : 'Analyze Book'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+        {/* World Calculators Section */}
+        {activeSection === 'calc' && (
+          <section id="world-calculators" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleCalcBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium mb-6">
+                <Calculator size={14} />
+                <span>WORLD CALCULATORS</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">UNIVERSAL SOLVER</h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                Perform complex unit conversions, currency exchanges, or scientific calculations. AI explains the steps and provides context for every result.
+              </p>
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={calcInput}
+                  onChange={(e) => setCalcInput(e.target.value)}
+                  placeholder="e.g., 500 USD to PKR or 100 miles to km"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                />
+                <button
+                  onClick={handleCalculate}
+                  disabled={isCalculating || !calcInput}
+                  className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Calculator size={18} />
+                  {isCalculating ? 'Calculating...' : 'Calculate Now'}
+                </button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
+                {calcResult ? (
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Calculation Result</h4>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(calcResult);
+                          alert('Result copied to clipboard!');
+                        }}
+                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 bg-amber-500/5 rounded-2xl p-6 border border-amber-500/20 overflow-y-auto custom-scrollbar">
+                      <p className="text-amber-200 font-mono text-lg leading-relaxed">{calcResult}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Calculator size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">Ready to Calculate</h3>
+                      <p className="text-sm text-zinc-600">Enter any conversion or math problem</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+        {/* AI Math Helper Section */}
+        {activeSection === 'math' && (
+          <section id="ai-math" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleMathBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="order-2 lg:order-1"
+            >
+              <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
+                {mathSolution ? (
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Step-by-Step Solution</h4>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(mathSolution);
+                          alert('Solution copied to clipboard!');
+                        }}
+                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">
+                        {mathSolution}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Binary size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">No Problem Solved</h3>
+                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a math problem to see the solution</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="order-1 lg:order-2"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
+                <Binary size={14} />
+                <span>AI MATH HELPER</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">MATHEMATICAL GENIUS</h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                From algebra to calculus, get step-by-step solutions and clear explanations for any mathematical problem. Learning math has never been easier.
+              </p>
+              
+              <div className="space-y-4">
+                <textarea
+                  value={mathProblem}
+                  onChange={(e) => setMathProblem(e.target.value)}
+                  placeholder="Enter your math problem here..."
+                  className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-teal-500 transition-colors resize-none"
+                />
+                <button
+                  onClick={handleSolveMath}
+                  disabled={isSolvingMath || !mathProblem}
+                  className="w-full py-4 bg-teal-500 hover:bg-teal-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Binary size={18} />
+                  {isSolvingMath ? 'Solving Problem...' : 'Solve Problem'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+        {/* Pakistan Education Section */}
+        {activeSection === 'edu' && (
+          <section id="pakistan-education" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleEduBack} />
+            
+            <div className="mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
+                <BookOpen size={14} />
+                <span>PAKISTAN EDUCATION</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 uppercase">
+                {eduStep === 'boards' && "Education Boards"}
+                {eduStep === 'classes' && `${selectedBoard}`}
+                {eduStep === 'subjects' && `${selectedClass} - ${selectedBoard}`}
+                {eduStep === 'content' && `${selectedSubject} - ${selectedClass}`}
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-2xl">
+                {eduStep === 'boards' && "Select your provincial or federal textbook board to access the latest academic resources."}
+                {eduStep === 'classes' && "Choose your grade level to view available subjects and solved materials."}
+                {eduStep === 'subjects' && "Select a subject to view solved exercises and syllabus details."}
+                {eduStep === 'content' && "AI-powered solved exercises and academic content updated for 2026."}
+              </p>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {eduStep === 'boards' && (
+                <motion.div
+                  key="boards"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {EDU_BOARDS.map((board) => (
+                    <button
+                      key={board}
+                      onClick={() => {
+                        setSelectedBoard(board);
+                        if (board === "Pakistan General Knowledge") {
+                          setEduStep('content');
+                          handleFetchSpecialContent('GK');
+                        } else if (board === "1000 Computer Solved MCQs") {
+                          setEduStep('content');
+                          handleFetchSpecialContent('MCQS');
+                        } else {
+                          setEduStep('classes');
+                        }
+                      }}
+                      className="p-8 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all text-left group relative overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <BookOpen size={24} />
+                        </div>
+                        <ArrowLeft className="rotate-180 text-zinc-600 group-hover:text-emerald-500 transition-colors" size={20} />
+                      </div>
+                      <h3 className="text-xl font-bold mb-2">{board}</h3>
+                      <p className="text-zinc-500 text-sm">Latest 2026 Syllabus & Resources</p>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+
+              {eduStep === 'classes' && (
+                <motion.div
+                  key="classes"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4"
+                >
+                  {EDU_CLASSES.map((cls) => (
+                    <button
+                      key={cls}
+                      onClick={() => {
+                        setSelectedClass(cls);
+                        setEduStep('subjects');
+                      }}
+                      className="group p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-emerald-500 hover:text-black transition-all flex flex-col items-center justify-center gap-4 text-center font-bold relative overflow-hidden"
+                    >
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:bg-black/20 group-hover:text-black transition-all">
+                        {getEduClassIcon(cls)}
+                      </div>
+                      <span className="text-sm uppercase tracking-wider">{cls}</span>
+                      <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+
+              {eduStep === 'subjects' && (
+                <motion.div
+                  key="subjects"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {EDU_SUBJECTS.map((sub) => (
+                    <button
+                      key={sub}
+                      onClick={() => {
+                        setSelectedSubject(sub);
+                        setEduStep('content');
+                        handleFetchEduContent(selectedBoard!, selectedClass!, sub);
+                      }}
+                      className="p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all flex items-center gap-6 group relative overflow-hidden"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 transition-all shrink-0">
+                        {getEduSubjectIcon(sub)}
+                      </div>
+                      <div className="text-left">
+                        <span className="block font-black text-xl mb-1 uppercase tracking-tight">{sub}</span>
+                        <span className="text-xs text-zinc-500 group-hover:text-emerald-500/60 transition-colors">View Solved Exercises</span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+
+              {eduStep === 'content' && (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className={`rounded-[2.5rem] border border-white/10 min-h-[60vh] relative overflow-hidden transition-colors duration-500 ${
+                    eduTheme === 'dark' ? 'bg-zinc-900' : 
+                    eduTheme === 'sepia' ? 'bg-[#f4ecd8]' : 'bg-white'
+                  }`}
+                >
+                  <div className={`absolute inset-0 pointer-events-none ${
+                    eduTheme === 'dark' ? 'bg-gradient-to-br from-emerald-500/5 to-transparent' : 'opacity-0'
+                  }`} />
+                  
+                  {isEduLoading ? (
+                    <div className="h-full flex flex-col items-center justify-center space-y-6 py-20">
+                      <div className="relative">
+                        <Loader2 className="w-16 h-16 text-emerald-500 animate-spin" />
+                        <div className="absolute inset-0 blur-xl bg-emerald-500/20 animate-pulse" />
+                      </div>
+                      <div className="text-center">
+                        <h3 className={`text-xl font-bold mb-2 ${eduTheme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>AI is generating content...</h3>
+                        <p className="text-zinc-500">Fetching latest 2026 syllabus and solved exercises</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative z-10 p-6 md:p-12">
+                      <div className={`flex flex-col md:flex-row md:items-center justify-between mb-8 pb-8 border-b ${eduTheme === 'dark' ? 'border-white/5' : 'border-zinc-200'} gap-6`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${eduTheme === 'dark' ? 'bg-emerald-500 text-black' : 'bg-emerald-600 text-white'}`}>
+                            <BookOpen size={24} />
+                          </div>
+                          <div>
+                            <h3 className={`text-2xl font-black tracking-tight uppercase ${eduTheme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>
+                              {selectedSubject || selectedBoard}
+                            </h3>
+                            <p className="text-zinc-500 text-sm">{selectedClass || "General Resource"}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 self-end md:self-auto">
+                          {/* Theme Toggles */}
+                          <div className="flex bg-black/5 p-1.5 rounded-2xl border border-white/5">
+                            {(['dark', 'sepia', 'light'] as const).map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => setEduTheme(t)}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                                  eduTheme === t ? 'bg-emerald-500 text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                                title={`${t.charAt(0).toUpperCase() + t.slice(1)} Mode`}
+                              >
+                                {t === 'dark' && <Sun size={14} className="rotate-180" />}
+                                {t === 'sepia' && <Palette size={14} />}
+                                {t === 'light' && <Sun size={14} />}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Font Size Toggles */}
+                          <div className="flex bg-black/5 p-1.5 rounded-2xl border border-white/5">
+                            {(['sm', 'base', 'lg', 'xl'] as const).map((s) => (
+                              <button
+                                key={s}
+                                onClick={() => setEduFontSize(s)}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all font-bold ${
+                                  eduFontSize === s ? 'bg-emerald-500 text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
+                                }`}
+                                title={`Font Size: ${s}`}
+                              >
+                                {s.toUpperCase()}
+                              </button>
+                            ))}
+                          </div>
+
+                          <button 
+                            onClick={() => {
+                              if (eduContent) {
+                                navigator.clipboard.writeText(eduContent);
+                                alert('Content copied to clipboard!');
+                              }
+                            }}
+                            className={`p-3 rounded-xl transition-all ${
+                              eduTheme === 'dark' ? 'bg-white/5 hover:bg-white/10 text-zinc-400' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'
+                            }`}
+                          >
+                            <Copy size={20} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className={`prose max-w-none transition-all duration-300 ${
+                        eduTheme === 'dark' ? 'prose-invert prose-emerald' : 
+                        eduTheme === 'sepia' ? 'prose-stone' : 'prose-zinc'
+                      } ${
+                        eduFontSize === 'sm' ? 'prose-sm' : 
+                        eduFontSize === 'base' ? 'prose-base' : 
+                        eduFontSize === 'lg' ? 'prose-lg' : 'prose-xl'
+                      }`}>
+                        <div className={`leading-relaxed font-light education-content ${
+                          eduTheme === 'dark' ? 'text-zinc-300' : 
+                          eduTheme === 'sepia' ? 'text-[#5b4636]' : 'text-zinc-800'
+                        }`}>
+                          <ReactMarkdown>
+                            {eduContent || ''}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+
+                      {/* AI Chat for Students */}
+                      <div className="mt-16 pt-16 border-t border-white/5">
+                        <div className="flex items-center gap-3 mb-8">
+                          <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                            <Sparkles size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-bold">Ask AI about this Exercise</h4>
+                            <p className="text-zinc-500 text-sm">Get instant help with any question related to this subject.</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
+                          {eduChatHistory.map((msg, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div className={`max-w-[80%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-orange-500 text-black font-medium' : 'bg-white/5 border border-white/10 text-zinc-300'}`}>
+                                <div className="prose prose-sm prose-invert max-w-none">
+                                  {msg.text}
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                          {isEduChatLoading && (
+                            <div className="flex justify-start">
+                              <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center gap-3">
+                                <Loader2 size={16} className="animate-spin text-orange-500" />
+                                <span className="text-zinc-500 text-sm">AI is thinking...</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={eduChatQuery}
+                            onChange={(e) => setEduChatQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleEduChat()}
+                            placeholder="Ask a question about this subject..."
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pr-16 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                          />
+                          <button
+                            onClick={handleEduChat}
+                            disabled={isEduChatLoading || !eduChatQuery}
+                            className="absolute right-2 top-2 bottom-2 px-4 bg-orange-500 hover:bg-orange-600 text-black rounded-xl font-bold transition-all disabled:opacity-50"
+                          >
+                            <Send size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+        )}
+
+        {/* AI Manifestation Section */}
+        {activeSection === 'manifest' && (
+          <section id="ai-manifestation" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={handleManifestBack} />
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium mb-6">
+                <Zap size={14} />
+                <span>AI MANIFESTATION</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">DREAM MANIFESTOR</h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                Turn your goals into reality. Generate powerful affirmations, visualization prompts, and manifestation scripts tailored to your personal journey.
+              </p>
+              
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={manifestationTopic}
+                  onChange={(e) => setManifestationTopic(e.target.value)}
+                  placeholder="What are you manifesting today? (e.g., Success, Love, Health)"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-violet-500 transition-colors"
+                />
+                <button
+                  onClick={handleManifest}
+                  disabled={isManifesting || !manifestationTopic}
+                  className="w-full py-4 bg-violet-500 hover:bg-violet-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Zap size={18} />
+                  {isManifesting ? 'Manifesting...' : 'Generate Affirmations'}
+                </button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
+                {manifestationAffirmation ? (
+                  <div className="h-full flex flex-col relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Your Affirmations</h4>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(manifestationAffirmation);
+                          alert('Affirmations copied to clipboard!');
+                        }}
+                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                      <div className="text-violet-200 text-xl font-serif italic leading-relaxed text-center py-8">
+                        {manifestationAffirmation}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Zap size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">Ready to Manifest</h3>
+                      <p className="text-sm text-zinc-600">Your affirmations will appear here</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+        {/* Sections */}
 
       </main>
 
-      <footer className="max-w-6xl mx-auto px-6 py-12 border-t border-white/5 text-center text-zinc-600 text-sm">
-        <p>© 2026 Aura Studio • Powered by Gemini AI</p>
+      <footer className="max-w-6xl mx-auto px-6 py-12 border-t border-white/5 text-center space-y-4">
+        <p className="text-zinc-600 text-sm">© 2026 Mi Studio • Powered by Mehar Ali Mehrani</p>
+        <div className="flex items-center justify-center gap-6">
+          <a href="/api/download-app" download="mi-studio-source.zip" className="text-orange-500 hover:text-orange-400 font-medium text-sm flex items-center gap-2">
+            <Download size={14} />
+            Download Source Code (ZIP)
+          </a>
+          <button onClick={() => setActiveSection('about')} className="text-zinc-500 hover:text-white font-medium text-sm">About Creator</button>
+        </div>
       </footer>
     </motion.div>
   );
