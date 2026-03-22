@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { 
   Loader2, Sparkles, Image as ImageIcon, Download, Share2, Check, Palette, Sun, Music, Video, 
   AlertCircle, Key, Home, Users, Eye, FileText, Mic, Languages, Send, Copy, Volume2, Menu, 
   Search, BookOpen, Calculator, Binary, Zap, Share, ArrowLeft, GraduationCap, School, Library, 
   Atom, Globe, FlaskConical, Microscope, Dna, Sigma, SquareFunction, PenTool, BookOpenCheck, 
-  ScrollText, Trophy 
+  ScrollText, Trophy, MessageSquare, Activity, Percent, DollarSign, Ruler, CreditCard, Flame, 
+  Clock, Variable, BarChart3, TrendingUp, Fuel, Utensils, Map, Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -25,13 +26,76 @@ declare global {
 }
 
 const VIDEO_LOADING_MESSAGES = [
-  "Analyzing your prompt for cinematic details...",
-  "Synthesizing initial video frames...",
-  "Applying temporal consistency filters...",
-  "Enhancing textures and lighting...",
+  "Initializing neural rendering engine...",
+  "Synthesizing high-fidelity frames...",
+  "Extending temporal coherence...",
+  "Applying cinematic color grading...",
   "Optimizing motion vectors...",
-  "Finalizing high-resolution output..."
+  "Finalizing visual composition...",
+  "Polishing artistic details...",
+  "Synchronizing frame transitions..."
 ];
+
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={`animate-pulse bg-zinc-800/50 rounded-lg ${className}`} />
+);
+
+const AILoadingState = ({ 
+  message = "Processing...", 
+  subMessage = "Our AI is working its magic",
+  icon: Icon = Sparkles,
+  className = ""
+}: { 
+  message?: string, 
+  subMessage?: string, 
+  icon?: any,
+  className?: string
+}) => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className={`flex flex-col items-center justify-center text-center p-8 space-y-6 ${className}`}
+  >
+    <div className="relative">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        className="w-24 h-24 rounded-full border-2 border-dashed border-orange-500/30"
+      />
+      <motion.div
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        <div className="w-16 h-16 bg-orange-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-orange-500/20">
+          <Icon className="w-8 h-8 text-orange-500" />
+        </div>
+      </motion.div>
+      <motion.div
+        animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 0.8] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-2 -right-2"
+      >
+        <Sparkles className="w-6 h-6 text-orange-400/50" />
+      </motion.div>
+    </div>
+    <div className="space-y-2">
+      <h3 className="text-xl font-bold tracking-tight text-white uppercase">{message}</h3>
+      <p className="text-zinc-500 text-sm font-medium max-w-[200px] mx-auto leading-relaxed">{subMessage}</p>
+    </div>
+    <div className="flex gap-1">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+          className="w-1.5 h-1.5 bg-orange-500 rounded-full"
+        />
+      ))}
+    </div>
+  </motion.div>
+);
 
 // Predefined Video Prompt Suggestions
 const VIDEO_SUGGESTIONS = [
@@ -200,6 +264,29 @@ const FILTERS = [
 // Reference image provided in the prompt
 const REFERENCE_IMAGE_URL = "https://storage.googleapis.com/applet-assets/orange-suit-ref.jpg"; // Placeholder, I will use the actual base64 if needed, but for now I'll assume I can fetch it or it's provided. Actually, I should probably allow the user to upload or just use the one provided in the prompt context.
 
+const FAMOUS_CALCULATORS = [
+  { id: 'scientific', name: 'Scientific Calculator', icon: Calculator, desc: 'Advanced mathematical functions including trigonometry and logarithms.' },
+  { id: 'bmi', name: 'BMI Calculator', icon: Activity, desc: 'Calculate your Body Mass Index to assess your health status.' },
+  { id: 'mortgage', name: 'Mortgage Calculator', icon: Home, desc: 'Estimate your monthly home loan payments and interest.' },
+  { id: 'currency', name: 'Currency Converter', icon: Globe, desc: 'Real-time exchange rates for global currencies.' },
+  { id: 'age', name: 'Age Calculator', icon: Calendar, desc: 'Find your exact age in years, months, and days.' },
+  { id: 'percentage', name: 'Percentage Calculator', icon: Percent, desc: 'Calculate percentages, increases, and decreases easily.' },
+  { id: 'gpa', name: 'GPA Calculator', icon: GraduationCap, desc: 'Calculate your Grade Point Average for academic tracking.' },
+  { id: 'tip', name: 'Tip Calculator', icon: DollarSign, desc: 'Split bills and calculate tips for group dining.' },
+  { id: 'unit', name: 'Unit Converter', icon: Ruler, desc: 'Convert between length, weight, volume, and more.' },
+  { id: 'loan', name: 'Loan Calculator', icon: CreditCard, desc: 'Calculate interest and payments for personal or auto loans.' },
+  { id: 'bmr', name: 'BMR Calculator', icon: Flame, desc: 'Basal Metabolic Rate to determine daily calorie needs.' },
+  { id: 'date', name: 'Date Calculator', icon: Clock, desc: 'Calculate days between dates or add/subtract time.' },
+  { id: 'binary', name: 'Binary Converter', icon: Binary, desc: 'Convert between Binary, Hex, Octal, and Decimal.' },
+  { id: 'gcd-lcm', name: 'GCD/LCM Calculator', icon: Sigma, desc: 'Find Greatest Common Divisor and Least Common Multiple.' },
+  { id: 'quadratic', name: 'Quadratic Solver', icon: Variable, desc: 'Solve quadratic equations (ax² + bx + c) instantly.' },
+  { id: 'stats', name: 'Standard Deviation', icon: BarChart3, desc: 'Calculate statistical variance and standard deviation.' },
+  { id: 'compound', name: 'Compound Interest', icon: TrendingUp, desc: 'See how your savings grow with compound interest.' },
+  { id: 'fuel', name: 'Fuel Cost Calculator', icon: Fuel, desc: 'Estimate trip expenses based on distance and efficiency.' },
+  { id: 'calorie', name: 'Calorie Calculator', icon: Utensils, desc: 'Daily calorie intake based on your fitness goals.' },
+  { id: 'timezone', name: 'Time Zone Converter', icon: Map, desc: 'Compare times across different global time zones.' }
+];
+
 const BackButton = ({ onClick }: { onClick: () => void }) => (
   <motion.button
     initial={{ opacity: 0, x: -10 }}
@@ -305,7 +392,10 @@ export default function App() {
     setError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       const parts: any[] = [];
 
@@ -420,7 +510,7 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-  const [activeSection, setActiveSection] = useState<'home' | 'image' | 'video' | 'music' | 'about' | 'vision' | 'script' | 'voice' | 'translate' | 'research' | 'book' | 'calc' | 'math' | 'manifest' | 'edu'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'image' | 'video' | 'music' | 'about' | 'vision' | 'script' | 'voice' | 'translate' | 'research' | 'book' | 'calc' | 'math' | 'manifest' | 'edu' | 'chat'>('home');
   
   // Pakistan Education States
   const [eduStep, setEduStep] = useState<'boards' | 'classes' | 'subjects' | 'content'>('boards');
@@ -476,10 +566,61 @@ export default function App() {
   const [bookAnalysis, setBookAnalysis] = useState('');
   const [isReadingBook, setIsReadingBook] = useState(false);
 
+  // AI Chat State
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+  const [isChatting, setIsChatting] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const chatInstanceRef = useRef<any>(null);
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isChatting) return;
+    
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setIsChatting(true);
+    setChatError(null);
+
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      if (!chatInstanceRef.current) {
+        chatInstanceRef.current = ai.chats.create({
+          model: "gemini-3-flash-preview",
+          config: {
+            systemInstruction: "You are a helpful AI assistant named Mi Studio Chat. You are professional, creative, and concise. You can help with coding, writing, analysis, and general questions. You are part of the Mi Studio creative suite created by Mehar Ali Mehrani.",
+          },
+        });
+      }
+
+      const response = await chatInstanceRef.current.sendMessage({ message: userMessage });
+      const botResponse = response.text;
+      
+      if (botResponse) {
+        setChatMessages(prev => [...prev, { role: 'model', text: botResponse }]);
+      } else {
+        throw new Error("Empty response from AI");
+      }
+    } catch (err: any) {
+      console.error('Chat error:', err);
+      setChatError(err.message || "Something went wrong. Please try again.");
+      // Reset chat instance on error to allow fresh start
+      chatInstanceRef.current = null;
+    } finally {
+      setIsChatting(false);
+    }
+  };
+
   // World Calculators State
   const [calcInput, setCalcInput] = useState('');
   const [calcResult, setCalcResult] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [selectedCalculator, setSelectedCalculator] = useState<typeof FAMOUS_CALCULATORS[0] | null>(null);
 
   // AI Mathematics Helper State
   const [mathProblem, setMathProblem] = useState('');
@@ -549,6 +690,9 @@ export default function App() {
     setVideoStatus('Initializing video generation...');
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const modelName = isRealisticMode ? 'veo-3.1-generate-preview' : 'veo-3.1-fast-generate-preview';
       
@@ -651,6 +795,9 @@ export default function App() {
       setVisionAnalysis('');
 
       try {
+        if (!process.env.GEMINI_API_KEY) {
+          throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+        }
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         const response = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
@@ -664,9 +811,9 @@ export default function App() {
           ]
         });
         setVisionAnalysis(response.text || 'Could not analyze image.');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Vision error:', err);
-        setVisionAnalysis('Error analyzing image. Please try again.');
+        setVisionAnalysis(`Error: ${err.message || "Please try again."}`);
       } finally {
         setIsAnalyzingVision(false);
       }
@@ -680,15 +827,18 @@ export default function App() {
     setGeneratedScript('');
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Write a cinematic, high-end movie script based on this prompt: "${scriptPrompt}". Include scene headings, character names, dialogue, and detailed action descriptions. Format it professionally.`,
       });
       setGeneratedScript(response.text || 'Could not generate script.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Script error:', err);
-      setGeneratedScript('Error generating script. Please try again.');
+      setGeneratedScript(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsGeneratingScript(false);
     }
@@ -700,6 +850,9 @@ export default function App() {
     setVoiceAudioUrl(null);
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
@@ -719,9 +872,12 @@ export default function App() {
         const audioBlob = await (await fetch(`data:audio/mp3;base64,${base64Audio}`)).blob();
         const url = URL.createObjectURL(audioBlob);
         setVoiceAudioUrl(url);
+      } else {
+        throw new Error("No audio was generated.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Voice error:', err);
+      alert(err.message || "Error generating voiceover. Please try again.");
     } finally {
       setIsGeneratingVoice(false);
     }
@@ -733,15 +889,18 @@ export default function App() {
     setTranslatedResult('');
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Translate the following text into ${targetLang}. Preserve the tone and artistic intent: "${translateText}"`,
       });
       setTranslatedResult(response.text || 'Could not translate.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Translate error:', err);
-      setTranslatedResult('Error translating. Please try again.');
+      setTranslatedResult(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsTranslating(false);
     }
@@ -752,6 +911,9 @@ export default function App() {
     setIsResearching(true);
     setResearchResult('');
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -759,9 +921,9 @@ export default function App() {
         config: { tools: [{ googleSearch: {} }] },
       });
       setResearchResult(response.text || 'No research results found.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Research error:', err);
-      setResearchResult('Error performing research. Please try again.');
+      setResearchResult(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsResearching(false);
     }
@@ -772,15 +934,18 @@ export default function App() {
     setIsReadingBook(true);
     setBookAnalysis('');
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Provide a detailed summary, key themes, and critical analysis of the book: "${bookTitle}".`,
       });
       setBookAnalysis(response.text || 'Could not analyze book.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Book reading error:', err);
-      setBookAnalysis('Error analyzing book. Please try again.');
+      setBookAnalysis(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsReadingBook(false);
     }
@@ -791,15 +956,19 @@ export default function App() {
     setIsCalculating(true);
     setCalcResult('');
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const context = selectedCalculator ? `Using the ${selectedCalculator.name} (${selectedCalculator.desc}), solve the following: ` : '';
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Perform the following calculation or conversion and explain the steps: "${calcInput}".`,
+        contents: `${context}"${calcInput}". Perform the calculation or conversion and explain the steps clearly.`,
       });
       setCalcResult(response.text || 'Could not perform calculation.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Calculator error:', err);
-      setCalcResult('Error performing calculation. Please try again.');
+      setCalcResult(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsCalculating(false);
     }
@@ -861,6 +1030,7 @@ export default function App() {
 
   const handleCalcBack = () => {
     if (calcResult) setCalcResult('');
+    else if (selectedCalculator) setSelectedCalculator(null);
     else setActiveSection('home');
   };
 
@@ -1014,15 +1184,18 @@ export default function App() {
     setIsSolvingMath(true);
     setMathSolution('');
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Solve this mathematics problem step-by-step: "${mathProblem}". Provide clear explanations for each step.`,
       });
       setMathSolution(response.text || 'Could not solve math problem.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Math error:', err);
-      setMathSolution('Error solving math problem. Please try again.');
+      setMathSolution(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsSolvingMath(false);
     }
@@ -1033,15 +1206,18 @@ export default function App() {
     setIsManifesting(true);
     setManifestationAffirmation('');
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("API Key is missing. Please configure it in the AI Studio secrets panel.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Create a powerful manifestation affirmation and a visualization prompt for the following goal: "${manifestationTopic}". Make it inspiring and positive.`,
       });
       setManifestationAffirmation(response.text || 'Could not generate manifestation.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Manifestation error:', err);
-      setManifestationAffirmation('Error generating manifestation. Please try again.');
+      setManifestationAffirmation(`Error: ${err.message || "Please try again."}`);
     } finally {
       setIsManifesting(false);
     }
@@ -1294,7 +1470,8 @@ export default function App() {
                     { id: 'calc', title: 'World Calculators', icon: Calculator, color: 'amber', desc: 'Solve complex calculations' },
                     { id: 'math', title: 'AI Math Helper', icon: Binary, color: 'teal', desc: 'Step-by-step math solutions' },
                     { id: 'edu', title: 'Pakistan Education', icon: BookOpen, color: 'emerald', desc: 'Latest syllabus & solved exercises' },
-                    { id: 'manifest', title: 'AI Manifestation', icon: Zap, color: 'violet', desc: 'Personalized affirmations' }
+                    { id: 'manifest', title: 'AI Manifestation', icon: Zap, color: 'violet', desc: 'Personalized affirmations' },
+                    { id: 'chat', title: 'AI Chat (GPT Style)', icon: MessageSquare, color: 'blue', desc: 'Chat with powerful AI' }
                   ].map((item) => (
                     <button 
                       key={item.id}
@@ -1544,6 +1721,7 @@ export default function App() {
                     { id: 'script', title: 'AI Scriptwriter', icon: FileText, color: 'pink', desc: 'Professional cinematic scripts.', size: 'medium', accent: 'bg-pink-500/20 text-pink-400', border: 'bg-pink-500' },
                     { id: 'voice', title: 'AI Voiceover', icon: Mic, color: 'cyan', desc: 'Natural-sounding speech synthesis.', size: 'small', accent: 'bg-cyan-500/20 text-cyan-400', border: 'bg-cyan-500' },
                     { id: 'translate', title: 'AI Translator', icon: Languages, color: 'yellow', desc: 'Break global language barriers.', size: 'small', accent: 'bg-yellow-500/20 text-yellow-400', border: 'bg-yellow-500' },
+                    { id: 'chat', title: 'AI Chat (GPT Style)', icon: MessageSquare, color: 'blue', desc: 'Chat with powerful AI for any task.', size: 'medium', accent: 'bg-blue-500/20 text-blue-400', border: 'bg-blue-500' },
                   ]
                 },
                 {
@@ -1967,11 +2145,26 @@ export default function App() {
               "aspect-[9/16]"
             }`}>
               <AnimatePresence mode="wait">
-                {generatedImage ? (
+                {isGenerating ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full h-full flex flex-col items-center justify-center"
+                  >
+                    <AILoadingState 
+                      message="Crafting Scene" 
+                      subMessage="Our neural engine is synthesizing your cinematic vision..." 
+                      icon={ImageIcon}
+                    />
+                  </motion.div>
+                ) : generatedImage ? (
                   <motion.div
                     key="result"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
                     className="w-full h-full relative"
                   >
                     <img 
@@ -1979,6 +2172,7 @@ export default function App() {
                       alt="Generated result" 
                       className="w-full h-full object-cover rounded-2xl shadow-2xl transition-all duration-300"
                       style={{ filter: selectedFilter.filter }}
+                      referrerPolicy="no-referrer"
                     />
                     {/* Hover overlay for quick download */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8 gap-4">
@@ -2005,25 +2199,16 @@ export default function App() {
                     key="placeholder"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="w-full h-full flex flex-col items-center justify-center text-zinc-600"
                   >
-                    {isGenerating ? (
-                      <div className="text-center space-y-4">
-                        <div className="relative">
-                          <Loader2 className="w-16 h-16 animate-spin text-orange-500/50" />
-                          <Sparkles className="w-6 h-6 text-orange-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                        </div>
-                        <p className="font-medium text-zinc-400 animate-pulse">Crafting your cinematic scene...</p>
+                    <div className="text-center p-12">
+                      <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Sparkles className="w-10 h-10 text-zinc-700" />
                       </div>
-                    ) : (
-                      <div className="text-center p-12">
-                        <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                          <Sparkles className="w-10 h-10 text-zinc-700" />
-                        </div>
-                        <p className="text-xl font-medium mb-2">Ready to Stylize</p>
-                        <p className="text-zinc-500">Upload a portrait and click generate to see the magic happen.</p>
-                      </div>
-                    )}
+                      <p className="text-xl font-medium mb-2">Ready to Stylize</p>
+                      <p className="text-zinc-500">Upload a portrait and click generate to see the magic happen.</p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -2314,45 +2499,56 @@ export default function App() {
               </div>
             )}
             
-            {isGeneratingVideo && (
-              <div className="mt-8 space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse">
-                      {VIDEO_LOADING_MESSAGES[loadingMessageIndex]}
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-500">{Math.round(videoProgress)}%</span>
+            <AnimatePresence mode="wait">
+              {isGeneratingVideo ? (
+                <motion.div 
+                  key="loading"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mt-8 space-y-6"
+                >
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse">
+                        {VIDEO_LOADING_MESSAGES[loadingMessageIndex]}
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-500">{Math.round(videoProgress)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <motion.div 
+                        className="h-full bg-gradient-to-r from-blue-600 to-blue-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${videoProgress}%` }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <motion.div 
-                      className="h-full bg-gradient-to-r from-blue-600 to-blue-400"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${videoProgress}%` }}
-                      transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                    />
+                  
+                  <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 mt-0.5">
+                      <Loader2 size={16} className="animate-spin" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-blue-100">{videoStatus}</p>
+                      <p className="text-[10px] text-zinc-500 leading-relaxed">
+                        Video generation is a complex process. We're currently processing {targetDuration} seconds of cinematic footage. Please stay on this page.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex items-start gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400 mt-0.5">
-                    <Loader2 size={16} className="animate-spin" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-blue-100">{videoStatus}</p>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed">
-                      Video generation is a complex process. We're currently processing {targetDuration} seconds of cinematic footage. Please stay on this page.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {!isGeneratingVideo && videoStatus && (
-              <p className="mt-4 text-sm text-red-400 flex items-center gap-2">
-                <AlertCircle size={14} />
-                {videoStatus}
-              </p>
-            )}
+                </motion.div>
+              ) : videoStatus && videoStatus.includes('Error') ? (
+                <motion.p 
+                  key="error"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4 text-sm text-red-400 flex items-center gap-2"
+                >
+                  <AlertCircle size={14} />
+                  {videoStatus}
+                </motion.p>
+              ) : null}
+            </AnimatePresence>
           </motion.div>
 
           <motion.div
@@ -2362,40 +2558,57 @@ export default function App() {
             className="relative"
           >
             <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 overflow-hidden flex items-center justify-center relative group/player">
-              {videoUrl ? (
-                <>
-                  <video 
-                    src={videoUrl} 
-                    controls 
-                    autoPlay 
-                    loop 
-                    className="w-full h-full object-cover"
+              <AnimatePresence mode="wait">
+                {isGeneratingVideo ? (
+                  <AILoadingState 
+                    key="loading"
+                    message={videoStatus || "Generating Video"} 
+                    subMessage={`Rendering and extending your scene... (${currentDuration}s / ${targetDuration}s)`} 
+                    icon={Video}
                   />
-                  <div className="absolute top-4 right-4 opacity-0 group-hover/player:opacity-100 transition-opacity">
-                    <button 
-                      onClick={handleDownloadVideo}
-                      className="p-3 bg-black/60 backdrop-blur-md border border-white/10 rounded-full hover:bg-black/80 text-white transition-all shadow-xl"
-                      title="Download Video"
-                    >
-                      <Download size={20} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center space-y-4 p-8">
-                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                    <Video size={40} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-zinc-500">
-                      {isGeneratingVideo ? `Generating (${currentDuration}s / ${targetDuration}s)` : "No Video Generated"}
-                    </h3>
-                    <p className="text-sm text-zinc-600 max-w-[240px] mx-auto">
-                      {isGeneratingVideo ? "Our AI is working hard to render and extend your scene..." : "Enter a prompt and click generate to start."}
-                    </p>
-                  </div>
-                </div>
-              )}
+                ) : videoUrl ? (
+                  <motion.div 
+                    key="content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full h-full relative"
+                  >
+                    <video 
+                      src={videoUrl} 
+                      controls 
+                      autoPlay 
+                      loop 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-4 right-4 opacity-0 group-hover/player:opacity-100 transition-opacity">
+                      <button 
+                        onClick={handleDownloadVideo}
+                        className="p-3 bg-black/60 backdrop-blur-md border border-white/10 rounded-full hover:bg-black/80 text-white transition-all shadow-xl"
+                        title="Download Video"
+                      >
+                        <Download size={20} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center justify-center text-center space-y-4 p-8"
+                  >
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Video size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">No Video Generated</h3>
+                      <p className="text-sm text-zinc-600 max-w-[240px] mx-auto">Enter a prompt and click generate to start.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
             {/* Decorative elements */}
@@ -2550,66 +2763,83 @@ export default function App() {
             className="relative"
           >
             <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
-              {generatedMusicInfo ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="h-full flex flex-col"
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center text-orange-400">
-                      <Music size={32} className="animate-pulse" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{generatedMusicInfo.title}</h3>
-                      <p className="text-sm text-zinc-500">AI Generated Composition</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Musical Description</h4>
-                      <p className="text-zinc-300 leading-relaxed italic">"{generatedMusicInfo.description}"</p>
+              <AnimatePresence mode="wait">
+                {isGeneratingMusic ? (
+                  <AILoadingState 
+                    key="loading"
+                    message="Composing Music" 
+                    subMessage="Crafting unique melodies and professional arrangements..." 
+                    icon={Music}
+                  />
+                ) : generatedMusicInfo ? (
+                  <motion.div
+                    key="content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="h-full flex flex-col"
+                  >
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center text-orange-400">
+                        <Music size={32} className="animate-pulse" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white">{generatedMusicInfo.title}</h3>
+                        <p className="text-sm text-zinc-500">AI Generated Composition</p>
+                      </div>
                     </div>
                     
-                    {generatedMusicInfo.lyrics && (
+                    <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
                       <div>
-                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Lyrics Snippet</h4>
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                          <p className="text-zinc-400 whitespace-pre-line leading-relaxed">
-                            {generatedMusicInfo.lyrics}
-                          </p>
-                        </div>
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Musical Description</h4>
+                        <p className="text-zinc-300 leading-relaxed italic">"{generatedMusicInfo.description}"</p>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="w-1 bg-orange-500/50 rounded-full animate-bounce" style={{ height: `${Math.random() * 20 + 10}px`, animationDelay: `${i * 0.1}s` }} />
-                      ))}
+                      
+                      {generatedMusicInfo.lyrics && (
+                        <div>
+                          <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Lyrics Snippet</h4>
+                          <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <p className="text-zinc-400 whitespace-pre-line leading-relaxed">
+                              {generatedMusicInfo.lyrics}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <button 
-                      onClick={handleDownloadMusicInfo}
-                      className="flex items-center gap-2 text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium group"
-                    >
-                      <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
-                      Download Score (TXT)
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                    <Music size={40} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-zinc-500">No Music Generated Yet</h3>
-                    <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a prompt to start your musical journey</p>
-                  </div>
-                </div>
-              )}
+                    
+                    <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className="w-1 bg-orange-500/50 rounded-full animate-bounce" style={{ height: `${Math.random() * 20 + 10}px`, animationDelay: `${i * 0.1}s` }} />
+                        ))}
+                      </div>
+                      <button 
+                        onClick={handleDownloadMusicInfo}
+                        className="flex items-center gap-2 text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium group"
+                      >
+                        <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                        Download Score (TXT)
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                  >
+                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                      <Music size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-500">No Music Generated Yet</h3>
+                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a prompt to start your musical journey</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
             {/* Decorative elements */}
@@ -2657,38 +2887,60 @@ export default function App() {
               className="relative"
             >
               <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
-                {visionImage ? (
-                  <div className="h-full flex flex-col gap-6">
-                    <div className="h-1/2 rounded-2xl overflow-hidden border border-white/10">
-                      <img src={visionImage} alt="Vision Input" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">AI Analysis</h4>
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(visionAnalysis);
-                          }}
-                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                          title="Copy Analysis"
-                        >
-                          <Copy size={14} />
-                        </button>
+                <AnimatePresence mode="wait">
+                  {isAnalyzingVision ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Analyzing Scene" 
+                      subMessage="Deconstructing composition, lighting, and artistic elements..." 
+                      icon={Eye}
+                    />
+                  ) : visionImage ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col gap-6"
+                    >
+                      <div className="h-1/2 rounded-2xl overflow-hidden border border-white/10">
+                        <img src={visionImage} alt="Vision Input" className="w-full h-full object-cover" />
                       </div>
-                      <p className="text-zinc-300 leading-relaxed whitespace-pre-line">{visionAnalysis || 'Analyzing...'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Eye size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Image Analyzed</h3>
-                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Upload a scene to unlock its creative secrets</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">AI Analysis</h4>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(visionAnalysis);
+                              alert('Analysis copied to clipboard!');
+                            }}
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                            title="Copy Analysis"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                        <p className="text-zinc-300 leading-relaxed whitespace-pre-line">{visionAnalysis || 'Analysis complete.'}</p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <Eye size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Image Analyzed</h3>
+                        <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Upload a scene to unlock its creative secrets</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               <div className="absolute -top-4 -right-4 w-24 h-24 bg-purple-500/10 blur-2xl rounded-full" />
             </motion.div>
@@ -2708,35 +2960,56 @@ export default function App() {
               className="order-2 lg:order-1"
             >
               <div className="aspect-[3/4] rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
-                {generatedScript ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Generated Script</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedScript);
-                          alert('Script copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
-                      <pre className="text-zinc-300 text-sm whitespace-pre-wrap font-mono leading-relaxed">{generatedScript}</pre>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <FileText size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Script Generated</h3>
-                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Describe your vision to generate a cinematic script</p>
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence mode="wait">
+                  {isGeneratingScript ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Writing Script" 
+                      subMessage="Drafting cinematic dialogue and professional scene directions..." 
+                      icon={FileText}
+                    />
+                  ) : generatedScript ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Generated Script</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedScript);
+                            alert('Script copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                        <pre className="text-zinc-300 text-sm whitespace-pre-wrap font-mono leading-relaxed">{generatedScript}</pre>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <FileText size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Script Generated</h3>
+                        <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Describe your vision to generate a cinematic script</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -2820,35 +3093,56 @@ export default function App() {
               className="relative"
             >
               <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col items-center justify-center text-center">
-                {voiceAudioUrl ? (
-                  <div className="space-y-6 w-full">
-                    <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400 mx-auto">
-                      <Mic size={40} className="animate-pulse" />
-                    </div>
-                    <audio src={voiceAudioUrl} controls className="w-full custom-audio-player" />
-                    <button 
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = voiceAudioUrl;
-                        link.download = `voiceover-${Date.now()}.mp3`;
-                        link.click();
-                      }}
-                      className="text-cyan-400 text-sm font-bold hover:underline"
+                <AnimatePresence mode="wait">
+                  {isGeneratingVoice ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Generating Voice" 
+                      subMessage="Synthesizing high-quality audio with natural intonation..." 
+                      icon={Mic}
+                    />
+                  ) : voiceAudioUrl ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="space-y-6 w-full"
                     >
-                      Download Audio
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700 mx-auto">
-                      <Mic size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Audio Generated</h3>
-                      <p className="text-sm text-zinc-600">Your voiceover will appear here</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400 mx-auto">
+                        <Mic size={40} className="animate-pulse" />
+                      </div>
+                      <audio src={voiceAudioUrl} controls className="w-full custom-audio-player" />
+                      <button 
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = voiceAudioUrl;
+                          link.download = `voiceover-${Date.now()}.mp3`;
+                          link.click();
+                        }}
+                        className="text-cyan-400 text-sm font-bold hover:underline"
+                      >
+                        Download Audio
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700 mx-auto">
+                        <Mic size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Audio Generated</h3>
+                        <p className="text-sm text-zinc-600">Your voiceover will appear here</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>
@@ -2867,35 +3161,57 @@ export default function App() {
               className="order-2 lg:order-1"
             >
               <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
-                {translatedResult ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Translation Result ({targetLang})</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(translatedResult);
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                        title="Copy Translation"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-2xl p-6 border border-white/5 overflow-y-auto custom-scrollbar">
-                      <p className="text-white leading-relaxed">{translatedResult}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Languages size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Translation Yet</h3>
-                      <p className="text-sm text-zinc-600">Translate your content globally</p>
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence mode="wait">
+                  {isTranslating ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Translating Content" 
+                      subMessage={`Converting your text into ${targetLang} while preserving artistic tone...`} 
+                      icon={Languages}
+                    />
+                  ) : translatedResult ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Translation Result ({targetLang})</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(translatedResult);
+                            alert('Translation copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                          title="Copy Translation"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                      <div className="flex-1 bg-white/5 rounded-2xl p-6 border border-white/5 overflow-y-auto custom-scrollbar">
+                        <p className="text-white leading-relaxed">{translatedResult}</p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <Languages size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Translation Yet</h3>
+                        <p className="text-sm text-zinc-600">Translate your content globally</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -2993,37 +3309,58 @@ export default function App() {
               className="relative"
             >
               <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
-                {researchResult ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Research Findings</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(researchResult);
-                          alert('Research copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
-                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
-                        {researchResult}
+                <AnimatePresence mode="wait">
+                  {isResearching ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Conducting Research" 
+                      subMessage="Searching Google and synthesizing key findings with AI..." 
+                      icon={Search}
+                    />
+                  ) : researchResult ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Research Findings</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(researchResult);
+                            alert('Research copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                        >
+                          <Copy size={16} />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Search size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Research Data</h3>
-                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a query to begin your deep dive</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                        <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                          {researchResult}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <Search size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Research Data</h3>
+                        <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a query to begin your deep dive</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>
@@ -3042,37 +3379,58 @@ export default function App() {
               className="order-2 lg:order-1"
             >
               <div className="aspect-[3/4] rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
-                {bookAnalysis ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Book Analysis</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(bookAnalysis);
-                          alert('Analysis copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
-                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap italic">
-                        {bookAnalysis}
+                <AnimatePresence mode="wait">
+                  {isReadingBook ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Analyzing Book" 
+                      subMessage="Synthesizing themes, characters, and key takeaways..." 
+                      icon={BookOpen}
+                    />
+                  ) : bookAnalysis ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Book Analysis</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(bookAnalysis);
+                            alert('Analysis copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                        >
+                          <Copy size={16} />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <BookOpen size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Book Analyzed</h3>
-                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a book title to get insights</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                        <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap italic">
+                          {bookAnalysis}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <BookOpen size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Book Analyzed</h3>
+                        <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a book title to get insights</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -3117,78 +3475,136 @@ export default function App() {
         {activeSection === 'calc' && (
           <section id="world-calculators" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
             <BackButton onClick={handleCalcBack} />
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium mb-6">
-                <Calculator size={14} />
-                <span>WORLD CALCULATORS</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">UNIVERSAL SOLVER</h2>
-              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
-                Perform complex unit conversions, currency exchanges, or scientific calculations. AI explains the steps and provides context for every result.
-              </p>
-              
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={calcInput}
-                  onChange={(e) => setCalcInput(e.target.value)}
-                  placeholder="e.g., 500 USD to PKR or 100 miles to km"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-amber-500 transition-colors"
-                />
-                <button
-                  onClick={handleCalculate}
-                  disabled={isCalculating || !calcInput}
-                  className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Calculator size={18} />
-                  {isCalculating ? 'Calculating...' : 'Calculate Now'}
-                </button>
-              </div>
-            </motion.div>
+            {!selectedCalculator ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-12"
+              >
+                <div className="text-center space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium uppercase tracking-widest">
+                    <Calculator size={14} />
+                    <span>Global Tools</span>
+                  </div>
+                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">World Calculators</h2>
+                  <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+                    Access a curated collection of the most famous and useful calculators from around the globe. Powered by AI for precision and clarity.
+                  </p>
+                </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
-                {calcResult ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Calculation Result</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(calcResult);
-                          alert('Result copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 bg-amber-500/5 rounded-2xl p-6 border border-amber-500/20 overflow-y-auto custom-scrollbar">
-                      <p className="text-amber-200 font-mono text-lg leading-relaxed">{calcResult}</p>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {FAMOUS_CALCULATORS.map((calc, idx) => (
+                    <motion.button
+                      key={calc.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      onClick={() => setSelectedCalculator(calc)}
+                      className="group p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-amber-500 hover:border-amber-500 transition-all text-left flex flex-col gap-4"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 group-hover:bg-black/10 flex items-center justify-center text-amber-500 group-hover:text-black transition-colors">
+                        <calc.icon size={24} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white group-hover:text-black transition-colors mb-1">{calc.name}</h3>
+                        <p className="text-xs text-zinc-500 group-hover:text-black/60 transition-colors line-clamp-2">{calc.desc}</p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium mb-6">
+                    <selectedCalculator.icon size={14} />
+                    <span>{selectedCalculator.name.toUpperCase()}</span>
                   </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Calculator size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">Ready to Calculate</h3>
-                      <p className="text-sm text-zinc-600">Enter any conversion or math problem</p>
-                    </div>
+                  <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">
+                    {selectedCalculator.name.split(' ')[0]} <span className="text-amber-500">SOLVER</span>
+                  </h2>
+                  <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
+                    {selectedCalculator.desc} AI will process your input and provide a detailed breakdown of the result.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={calcInput}
+                      onChange={(e) => setCalcInput(e.target.value)}
+                      placeholder={`Enter values for ${selectedCalculator.name}...`}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-amber-500 transition-colors"
+                    />
+                    <button
+                      onClick={handleCalculate}
+                      disabled={isCalculating || !calcInput}
+                      className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-black rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <selectedCalculator.icon size={18} />
+                      {isCalculating ? 'Calculating...' : 'Calculate Now'}
+                    </button>
+                    <button 
+                      onClick={() => setSelectedCalculator(null)}
+                      className="w-full py-3 text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
+                    >
+                      Choose different calculator
+                    </button>
                   </div>
-                )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <div className="aspect-video rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      {isCalculating ? (
+                        <AILoadingState 
+                          key="loading"
+                          message="Solving Equation" 
+                          subMessage={`Processing ${selectedCalculator.name} operations...`} 
+                          icon={selectedCalculator.icon}
+                        />
+                      ) : calcResult ? (
+                        <motion.div 
+                          key="content"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="h-full flex flex-col"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{selectedCalculator.name} Result</h4>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(calcResult);
+                                alert('Result copied to clipboard!');
+                              }}
+                              className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                            >
+                              <Copy size={16} />
+                            </button>
+                          </div>
+                          <div className="flex-1 bg-amber-500/5 rounded-2xl p-6 border border-amber-500/20 overflow-y-auto custom-scrollbar">
+                            <div className="text-amber-200 font-mono text-lg leading-relaxed prose prose-invert prose-amber max-w-none">
+                              <ReactMarkdown>{calcResult}</ReactMarkdown>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-30">
+                          <selectedCalculator.icon size={48} />
+                          <p className="text-sm font-medium uppercase tracking-widest">Awaiting Input</p>
+                        </div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          </div>
+            )}
         </section>
       )}
 
@@ -3204,37 +3620,58 @@ export default function App() {
               className="order-2 lg:order-1"
             >
               <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-6 md:p-8 flex flex-col overflow-hidden">
-                {mathSolution ? (
-                  <div className="h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Step-by-Step Solution</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(mathSolution);
-                          alert('Solution copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
-                      <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">
-                        {mathSolution}
+                <AnimatePresence mode="wait">
+                  {isSolvingMath ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Solving Math Problem" 
+                      subMessage="Analyzing variables and calculating step-by-step solutions..." 
+                      icon={Binary}
+                    />
+                  ) : mathSolution ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Step-by-Step Solution</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(mathSolution);
+                            alert('Solution copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                        >
+                          <Copy size={16} />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Binary size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">No Problem Solved</h3>
-                      <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a math problem to see the solution</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar bg-black/20 p-6 rounded-2xl border border-white/5">
+                        <div className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">
+                          {mathSolution}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <Binary size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">No Problem Solved</h3>
+                        <p className="text-sm text-zinc-600 max-w-[200px] mx-auto">Enter a math problem to see the solution</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -3411,15 +3848,12 @@ export default function App() {
                   }`} />
                   
                   {isEduLoading ? (
-                    <div className="h-full flex flex-col items-center justify-center space-y-6 py-20">
-                      <div className="relative">
-                        <Loader2 className="w-16 h-16 text-emerald-500 animate-spin" />
-                        <div className="absolute inset-0 blur-xl bg-emerald-500/20 animate-pulse" />
-                      </div>
-                      <div className="text-center">
-                        <h3 className={`text-xl font-bold mb-2 ${eduTheme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>AI is generating content...</h3>
-                        <p className="text-zinc-500">Fetching latest 2026 syllabus and solved exercises</p>
-                      </div>
+                    <div className="h-full flex flex-col items-center justify-center py-20">
+                      <AILoadingState 
+                        message="Preparing Educational Content" 
+                        subMessage="Fetching the latest 2026 syllabus and synthesizing solved exercises..." 
+                        icon={GraduationCap}
+                      />
                     </div>
                   ) : (
                     <div className="relative z-10 p-6 md:p-12">
@@ -3568,6 +4002,117 @@ export default function App() {
           </section>
         )}
 
+        {/* AI Chat Section */}
+        {activeSection === 'chat' && (
+          <section id="ai-chat" className="max-w-4xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
+            <BackButton onClick={() => setActiveSection('home')} />
+            <div className="flex flex-col h-[70vh] bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+              {/* Chat Header */}
+              <div className="p-6 border-b border-white/5 bg-zinc-900 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+                    <MessageSquare size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">AI Chat (GPT Style)</h2>
+                    <p className="text-xs text-zinc-500 uppercase tracking-widest">Powered by Gemini 3 Flash</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setChatMessages([])}
+                  className="text-zinc-500 hover:text-white transition-colors text-sm font-medium"
+                >
+                  Clear Chat
+                </button>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                {chatMessages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
+                    <div className="p-6 bg-white/5 rounded-full">
+                      <Sparkles size={48} className="text-blue-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Welcome to Mi Studio Chat</h3>
+                      <p className="text-sm max-w-xs">Ask me anything! I can help with coding, writing, research, or just chat.</p>
+                    </div>
+                  </div>
+                ) : (
+                  chatMessages.map((msg, idx) => (
+                    <motion.div 
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div className={`max-w-[85%] p-4 rounded-2xl ${
+                        msg.role === 'user' 
+                          ? 'bg-blue-600 text-white rounded-tr-none' 
+                          : 'bg-white/5 text-zinc-200 border border-white/10 rounded-tl-none'
+                      }`}>
+                        <div className="prose prose-invert prose-sm max-w-none">
+                          <ReactMarkdown>{msg.text}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+                {isChatting && (
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none border border-white/10 flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin text-blue-500" />
+                      <span className="text-sm text-zinc-500">AI is thinking...</span>
+                    </div>
+                  </div>
+                )}
+                {chatError && (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-red-400 text-xs flex items-center gap-2">
+                      <AlertCircle size={14} />
+                      {chatError}
+                    </div>
+                    <button 
+                      onClick={handleSendMessage}
+                      className="text-xs text-blue-400 hover:underline"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="p-6 border-t border-white/5 bg-zinc-900/80">
+                <div className="relative">
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Type your message here..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pr-16 text-white focus:outline-none focus:border-blue-500 transition-colors resize-none min-h-[60px] max-h-[200px]"
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={isChatting || !chatInput.trim()}
+                    className="absolute right-3 bottom-3 p-3 bg-blue-500 hover:bg-blue-600 text-black rounded-xl transition-all disabled:opacity-50"
+                  >
+                    <Send size={20} />
+                  </button>
+                </div>
+                <p className="mt-3 text-[10px] text-zinc-600 text-center">
+                  Press Enter to send, Shift+Enter for new line.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* AI Manifestation Section */}
         {activeSection === 'manifest' && (
           <section id="ai-manifestation" className="max-w-6xl mx-auto px-6 py-12 md:py-20 border-t border-white/5">
@@ -3613,37 +4158,58 @@ export default function App() {
             >
               <div className="aspect-square rounded-3xl bg-zinc-900 border border-white/5 p-8 flex flex-col overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none" />
-                {manifestationAffirmation ? (
-                  <div className="h-full flex flex-col relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Your Affirmations</h4>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(manifestationAffirmation);
-                          alert('Affirmations copied to clipboard!');
-                        }}
-                        className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
-                      >
-                        <Copy size={16} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                      <div className="text-violet-200 text-xl font-serif italic leading-relaxed text-center py-8">
-                        {manifestationAffirmation}
+                <AnimatePresence mode="wait">
+                  {isManifesting ? (
+                    <AILoadingState 
+                      key="loading"
+                      message="Manifesting Dreams" 
+                      subMessage="Aligning intentions and generating powerful affirmations for your journey..." 
+                      icon={Zap}
+                    />
+                  ) : manifestationAffirmation ? (
+                    <motion.div 
+                      key="content"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col relative z-10"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Your Affirmations</h4>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(manifestationAffirmation);
+                            alert('Affirmations copied to clipboard!');
+                          }}
+                          className="p-2 hover:bg-white/5 rounded-lg text-zinc-400"
+                        >
+                          <Copy size={16} />
+                        </button>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
-                      <Zap size={40} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-zinc-500">Ready to Manifest</h3>
-                      <p className="text-sm text-zinc-600">Your affirmations will appear here</p>
-                    </div>
-                  </div>
-                )}
+                      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="text-violet-200 text-xl font-serif italic leading-relaxed text-center py-8">
+                          {manifestationAffirmation}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="placeholder"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-zinc-700">
+                        <Zap size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-zinc-500">Ready to Manifest</h3>
+                        <p className="text-sm text-zinc-600">Your affirmations will appear here</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </div>
@@ -3653,6 +4219,31 @@ export default function App() {
         {/* Sections */}
 
       </main>
+
+      {/* API Key Warning */}
+      {!process.env.GEMINI_API_KEY && (
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md">
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-red-500"
+          >
+            <div className="p-2 bg-white/20 rounded-lg">
+              <AlertCircle size={24} />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-sm">API Key Missing</h4>
+              <p className="text-xs opacity-90">Please configure your Gemini API Key in the AI Studio Secrets panel to use the tools.</p>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Zap size={20} />
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       <footer className="max-w-6xl mx-auto px-6 py-12 border-t border-white/5 text-center space-y-4">
         <p className="text-zinc-600 text-sm">© 2026 Mi Studio • Powered by Mehar Ali Mehrani</p>

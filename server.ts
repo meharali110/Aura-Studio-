@@ -31,7 +31,7 @@ async function startServer() {
           }
         } else {
           // Add individual files
-          if (!['package-lock.json', '.DS_Store'].includes(item)) {
+          if (!['.DS_Store'].includes(item)) {
             zip.addLocalFile(itemPath);
           }
         }
